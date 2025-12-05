@@ -3,85 +3,56 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Catalog — StockTone</title>
-
-  <!-- style -->
+  <title>Catalog - StockTone</title>
   <link rel="stylesheet" href="style.css">
-
-  <!-- config (ต้องมี APPS_SCRIPT_URL) -->
   <script src="config.js"></script>
-
-  <!-- catalog logic -->
-  <script defer src="catalog.js"></script>
 </head>
 <body>
   <header class="site-header">
-    <div class="container header-inner">
-      <div class="brand">
-        <img src="assets/logo-64.png" alt="StockTone" class="brand-logo" onerror="this.style.display='none'">
-        <h1 class="site-title">StockTone</h1>
+    <div class="container">
+      <h1 class="logo">StockTone</h1>
+      <div class="header-actions">
+        <input id="searchInput" placeholder="ค้นหาสินค้า..." />
+        <button id="searchBtn">ค้นหา</button>
       </div>
-      <nav class="header-actions">
-        <a class="btn btn-ghost" href="index.html">หน้าแรก</a>
-        <a class="btn" href="admin.html">แผงผู้ดูแล</a>
-      </nav>
     </div>
   </header>
 
-  <main class="container main-content">
-    <section class="catalog-controls card">
-      <div class="row">
-        <input id="searchBox" class="input" placeholder="ค้นหาสินค้า ชื่อ หรือ SKU..." />
-        <select id="filterStatus" class="select">
+  <main class="container main-grid">
+    <section class="filters-area">
+      <!-- future filters (category, status) -->
+      <div class="filters-row">
+        <select id="filterCategory"><option value="">หมวดหมู่ทั้งหมด</option></select>
+        <select id="filterStatus">
           <option value="">สถานะทั้งหมด</option>
-          <option value="active">Active</option>
-          <option value="deleted">Deleted</option>
-          <option value="ready">พร้อมส่ง</option>
+          <option value="active">active</option>
+          <option value="deleted">deleted</option>
+          <option value="พร้อมส่ง">พร้อมส่ง</option>
         </select>
-        <select id="filterCategory" class="select">
-          <option value="">หมวดหมู่ทั้งหมด</option>
-          <!-- categories จะเติมโดย JS ถ้ามีข้อมูล -->
-        </select>
-        <button id="btnSearch" class="btn">ค้นหา</button>
-        <button id="btnReload" class="btn btn-outline">โหลดใหม่</button>
+        <button id="clearFilters">ล้าง</button>
       </div>
     </section>
 
-    <section class="catalog-grid-wrap">
+    <section class="catalog-area">
       <div id="spinnerOverlay" class="spinner-overlay hidden">
-        <div class="spinner">
-          <div class="lds-dual-ring"></div>
-          <div class="spinner-text" id="spinnerText">กำลังโหลด...</div>
+        <div class="spinner-card">
+          <div class="spinner"></div>
+          <div id="spinnerStep" class="spinner-step">กำลังโหลด...</div>
         </div>
       </div>
 
-      <div id="catalogGrid" class="catalog-grid">
-        <!-- cards ถูกเติมโดย JS -->
+      <div id="cards" class="cards-grid">
+        <!-- cards injected here -->
       </div>
 
-      <div id="noResult" class="empty-state hidden card">
-        <p>ไม่พบสินค้า</p>
-      </div>
-
-      <div class="load-more-wrap">
-        <button id="btnLoadMore" class="btn btn-outline hidden">โหลดเพิ่ม</button>
-      </div>
+      <div id="catalogMsg" class="muted" style="padding:12px 0"></div>
     </section>
   </main>
 
-  <!-- modal placeholder -->
-  <div id="detailModal" class="modal hidden" role="dialog" aria-modal="true">
-    <div class="modal-panel card">
-      <button class="modal-close" id="modalClose">&times;</button>
-      <div id="detailContent">
-        <!-- เติมด้วย JS -->
-        <div class="detail-loading">กำลังโหลดรายละเอียด...</div>
-      </div>
-    </div>
-  </div>
-
-  <footer class="site-footer">
-    <div class="container">StockTone — Catalog</div>
+  <footer class="container footer">
+    <small>StockTone — catalog view</small>
   </footer>
+
+  <script src="catalog.js"></script>
 </body>
 </html>
