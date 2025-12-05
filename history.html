@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>StockTone — History</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="config.js"></script>
+</head>
+<body>
+  <main class="container">
+    <header class="site-header">
+      <h1>History</h1>
+      <p class="muted">ประวัติการเพิ่ม/รับเข้า/ตัดออก (เรียงล่าสุดก่อน)</p>
+    </header>
+
+    <section class="card">
+      <div class="search-row">
+        <input id="h_sku" placeholder="กรองตาม SKU (optional)"/>
+        <button id="h_load">โหลด</button>
+      </div>
+
+      <div id="historyMsg" class="muted small">ยังไม่ได้โหลด</div>
+      <table id="historyTable" class="table">
+        <thead><tr><th>เวลา</th><th>SKU</th><th>action</th><th>qty</th><th>note</th><th>admin</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <footer class="site-footer">
+      <a href="admin.html">← กลับ Admin</a>
+    </footer>
+  </main>
+
+  <script>
+    async function apiGet(params){
+      const url = APPS_SCRIPT_URL + '?' + new URLSearchParams(params).toString();
+      const r = await fetch(url);
+      return r.json();
+    }
+
+    async function loadHistory(sku){
+      const msg = document.getElementById('historyMsg');
+      msg.textContent = 'กำลังโหลด...';
+      try{
+        const params = { action:'history_list', limit:200 };
+        if(sku) params.sku = sku;
+        const r = await apiGet(params);
+        if(!r.ok){ msg.textContent = 'โหลดล้มเหลว'; return; }
+        const tbody = document.querySelector('#historyTable tbody');
+        tbody.innerHTML = '';
+        (r.data||[]).forEach(row=>{
+          const tr = document.createElement('tr');
+          tr.innerHTML = '<td>'+ (row.timestamp||'') +'</td>'
+                       + '<td>'+ (row.sku||'') +'</td>'
+                       + '<td>'+ (row.action||'') +'</td>'
+                       + '<td>'+ (row.qty||'') +'</td>'
+                       + '<td>'+ (row.note||'') +'</td>'
+                       + '<td>'+ (row.adminId || row.admin || '') +'</td>';
+          tbody.appendChild(tr);
+        });
+        msg.textContent = 'โหลดสำเร็จ ' + (r.total||0);
+      }catch(err){
+        msg.textContent = 'ข้อผิดพลาด: ' + err.message;
+      }
+    }
+
+    document.getElementById('h_load').addEventListener('click', ()=> loadHistory(document.getElementById('h_sku').value.trim()));
+    // initial load
+    loadHistory();
+  </script>
+</body>
+</html>
