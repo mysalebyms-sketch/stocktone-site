@@ -202,26 +202,36 @@ function createEditModal(){
   // แทนที่ส่วนเดิมที่ผูกกับ #btnDelete ด้วยโค้ดนี้
 wrap.querySelector('#btnDelete').addEventListener('click', async ()=>{
   if(!confirm('ยืนยันการลบสินค้านี้?')) return;
-  const soft = document.getElementById('softDelete').checked; // ถ้าติ๊กเป็น soft delete
+  const btn = wrap.querySelector('#btnDelete');
+  const soft = document.getElementById('softDelete').checked;
   const sku = document.getElementById('edit_sku').value.trim();
   const s = getSession();
+  if(!s.adminId || !s.adminPassword){ alert('session หมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง'); return; }
+
+  // disable UI
+  btn.disabled = true;
+  const prevText = btn.textContent;
+  btn.textContent = 'กำลังลบ...';
+
   try{
-    // ส่ง request
     const params = { action:'delete', adminId:s.adminId, adminPassword:s.adminPassword, sku: sku };
-    if(!soft) params.hard = 'true'; // hard delete เมื่อไม่ได้ติ๊ก soft
+    if(!soft) params.hard = 'true';
     const res = await apiPost(params);
     if(res && res.ok){
+      // success
       alert('ลบเรียบร้อย');
-      // ปิด modal
       createEditModal().style.visibility = 'hidden';
-      // รีโหลดรายการ (จะใช้ handleList ที่ไม่คืน deleted โดย default)
-      await loadProducts();
+      await loadProducts(); // รีโหลดรายการหลังลบ
     } else {
-      alert('ลบไม่สำเร็จ: ' + (res && res.error));
+      console.warn('Delete response:', res);
+      alert('ลบไม่สำเร็จ: ' + (res && res.error ? res.error : 'Unknown error'));
     }
   } catch(err){
     console.error('Delete error:', err);
-    alert('ข้อผิดพลาด: ' + err.message);
+    alert('ข้อผิดพลาดในการลบ: ' + (err && err.message ? err.message : err));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = prevText;
   }
 });
 
