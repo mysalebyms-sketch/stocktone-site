@@ -1,52 +1,30 @@
 /*
- admin.js - StockTone Admin Panel (Full)
+ admin.js - StockTone Admin Panel (Full) with In/Out modal
  Assumes: admin.html structure + config.js (APPS_SCRIPT_URL)
- Minimal, readable, maintainable. (Thai UI)
 */
 
 // ---------- Utilities ----------
 function esc(s){ return String(s==null?'':s).replace(/[&<>"'`=\\/]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;','=':'&#61;','/':'&#47;','\\':'\\\\'}[c]; }); }
-
-function showMsg(id, msg, isError){
-  const el = document.getElementById(id);
-  if(!el) return;
-  el.textContent = msg || '';
-  el.style.color = isError ? 'red' : 'green';
-}
+function showMsg(id, msg, isError){ const el = document.getElementById(id); if(!el) return; el.textContent = msg||''; el.style.color = isError ? 'red' : 'green'; }
 
 // ---------- Config / Session ----------
 if(typeof APPS_SCRIPT_URL === 'undefined') console.warn('APPS_SCRIPT_URL not defined - set config.js');
+function saveSession(adminId, adminPassword){ sessionStorage.setItem('adminId', adminId); sessionStorage.setItem('adminPassword', adminPassword); }
+function clearSession(){ sessionStorage.removeItem('adminId'); sessionStorage.removeItem('adminPassword'); }
+function getSession(){ return { adminId: sessionStorage.getItem('adminId')||'', adminPassword: sessionStorage.getItem('adminPassword')||'' }; }
 
-function saveSession(adminId, adminPassword){
-  sessionStorage.setItem('adminId', adminId);
-  sessionStorage.setItem('adminPassword', adminPassword);
-}
-function clearSession(){
-  sessionStorage.removeItem('adminId');
-  sessionStorage.removeItem('adminPassword');
-}
-function getSession(){
-  return {
-    adminId: sessionStorage.getItem('adminId') || '',
-    adminPassword: sessionStorage.getItem('adminPassword') || ''
-  };
-}
-
-// ---------- Upload helper (no custom Content-Type -> avoid preflight) ----------
+// ---------- Upload helper ----------
 async function uploadImage(file, opts = {}){
   if(!file) throw new Error('No file provided');
   const adminId = opts.adminId || getSession().adminId || '';
   const adminPassword = opts.adminPassword || getSession().adminPassword || '';
   const sku = opts.sku || '';
-
-  // Read file as base64
   const base64 = await new Promise((resolve, reject) => {
     const fr = new FileReader();
     fr.onload = () => resolve(fr.result.split(',')[1]);
     fr.onerror = reject;
     fr.readAsDataURL(file);
   });
-
   const params = new URLSearchParams();
   params.append('action','upload_image');
   params.append('adminId', adminId);
@@ -55,32 +33,14 @@ async function uploadImage(file, opts = {}){
   params.append('contentType', file.type || 'image/png');
   params.append('base64', base64);
   if(sku) params.append('sku', sku);
-
-  const resp = await fetch(APPS_SCRIPT_URL + '?action=upload_image', {
-    method: 'POST',
-    body: params
-  });
-
+  const resp = await fetch(APPS_SCRIPT_URL + '?action=upload_image', { method: 'POST', body: params });
   const text = await resp.text();
   try { return JSON.parse(text); } catch(e){ throw new Error('Invalid response: ' + text); }
 }
 
 // ---------- API helpers ----------
-async function apiGet(params){
-  const url = APPS_SCRIPT_URL + '?' + new URLSearchParams(params).toString();
-  const r = await fetch(url);
-  return r.json();
-}
-async function apiPost(paramsObj){
-  const url = APPS_SCRIPT_URL + '?' + (paramsObj.action ? 'action=' + encodeURIComponent(paramsObj.action) : '');
-  // For add/update/delete we use GET-like query (works) or POST simple
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: {'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
-    body: new URLSearchParams(paramsObj)
-  });
-  return r.json();
-}
+async function apiGet(params){ const url = APPS_SCRIPT_URL + '?' + new URLSearchParams(params).toString(); const r = await fetch(url); return r.json(); }
+async function apiPost(paramsObj){ const url = APPS_SCRIPT_URL + '?' + (paramsObj.action ? 'action=' + encodeURIComponent(paramsObj.action) : ''); const r = await fetch(url, { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'}, body: new URLSearchParams(paramsObj) }); return r.json(); }
 
 // ---------- UI: Login / Logout ----------
 function initLoginUI(){
@@ -89,37 +49,22 @@ function initLoginUI(){
   const who = document.getElementById('who');
   const loginSection = document.getElementById('loginSection');
   const adminArea = document.getElementById('adminArea');
-
   function updateState(){
     const s = getSession();
-    if(s.adminId && s.adminPassword){
-      loginSection.style.display = 'none';
-      adminArea.style.display = 'block';
-      who.textContent = esc(s.adminId);
-    } else {
-      loginSection.style.display = 'block';
-      adminArea.style.display = 'none';
-      who.textContent = '';
-    }
+    if(s.adminId && s.adminPassword){ loginSection.style.display='none'; adminArea.style.display='block'; who.textContent = esc(s.adminId); }
+    else { loginSection.style.display='block'; adminArea.style.display='none'; who.textContent=''; }
   }
-
   loginBtn.addEventListener('click', async ()=>{
     const adminId = document.getElementById('adminId').value.trim();
     const adminPassword = document.getElementById('adminPassword').value.trim();
     if(!adminId || !adminPassword){ showMsg('loginMsg','กรุณากรอก Admin ID และ Password', true); return; }
-    // quick check by calling list with credentials (server validates on write ops; we just store)
     saveSession(adminId, adminPassword);
     showMsg('loginMsg','เข้าสู่ระบบ...', false);
     updateState();
     await loadProducts();
     showMsg('loginMsg','เข้าสู่ระบบเรียบร้อย', false);
   });
-
-  logoutBtn.addEventListener('click', ()=>{
-    clearSession();
-    updateState();
-  });
-
+  logoutBtn.addEventListener('click', ()=>{ clearSession(); updateState(); });
   updateState();
 }
 
@@ -161,11 +106,10 @@ async function loadProducts(q){
     showMsg('listMsg','โหลดรายการผิดพลาด: ' + err.message, true);
   }
 }
-
 function attachRowEvents(){
   document.querySelectorAll('.btn-edit').forEach(b => b.onclick = handleEdit);
-  document.querySelectorAll('.btn-in').forEach(b => b.onclick = ()=>handleInOut(b.dataset.sku, 'in'));
-  document.querySelectorAll('.btn-out').forEach(b => b.onclick = ()=>handleInOut(b.dataset.sku, 'out'));
+  document.querySelectorAll('.btn-in').forEach(b => b.onclick = ()=>openInOutModal(b.dataset.sku, 'in'));
+  document.querySelectorAll('.btn-out').forEach(b => b.onclick = ()=>openInOutModal(b.dataset.sku, 'out'));
   document.querySelectorAll('.btn-delete').forEach(b => b.onclick = handleDeleteProduct);
 }
 
@@ -183,44 +127,25 @@ async function handleAddProduct(evt){
   const category = fd.get('category') || '';
   const fileInput = document.getElementById('fileInput');
   const file = fileInput && fileInput.files && fileInput.files[0];
-
   showMsg('addMsg','กำลังเพิ่มสินค้า...', false);
   try {
-    // If file present, upload first to get imageUrl
     let imageUrl = '';
     if(file){
       const up = await uploadImage(file, { sku: sku }); // uses session credentials
-      if(!up || !up.ok) { showMsg('addMsg','อัปโหลดรูปไม่สำเร็จ', true); return; }
+      if(!up || !up.ok){ showMsg('addMsg','อัปโหลดรูปไม่สำเร็จ', true); return; }
       imageUrl = up.imageUrl || '';
     }
-
-    // call add
     const s = getSession();
-    const params = {
-      action: 'add',
-      adminId: s.adminId,
-      adminPassword: s.adminPassword,
-      sku: sku, name: name, quantity: quantity, cost: cost,
-      status: status, imageUrl: imageUrl, category: category
-    };
+    const params = { action: 'add', adminId: s.adminId, adminPassword: s.adminPassword, sku: sku, name: name, quantity: quantity, cost: cost, status: status, imageUrl: imageUrl, category: category };
     const res = await apiPost(params);
-    if(res && res.ok){
-      showMsg('addMsg','เพิ่มสินค้าเรียบร้อย', false);
-      form.reset();
-      await loadProducts();
-    } else {
-      showMsg('addMsg','เพิ่มสินค้าไม่สำเร็จ: ' + (res && res.error || 'unknown'), true);
-    }
-  } catch(err){
-    console.error(err);
-    showMsg('addMsg','เพิ่มสินค้าไม่สำเร็จ: ' + err.message, true);
-  }
+    if(res && res.ok){ showMsg('addMsg','เพิ่มสินค้าเรียบร้อย', false); form.reset(); await loadProducts(); }
+    else { showMsg('addMsg','เพิ่มสินค้าไม่สำเร็จ: ' + (res && res.error || 'unknown'), true); }
+  } catch(err){ console.error(err); showMsg('addMsg','เพิ่มสินค้าไม่สำเร็จ: ' + err.message, true); }
 }
 
-// ---------- Edit / In/Out / Delete ----------
+// ---------- Edit / Delete ----------
 async function handleEdit(e){
   const sku = e.target.dataset.sku;
-  // simple prompt-based edit for brevity
   const name = prompt('ชื่อสินค้าใหม่ (ปล่อยว่าง = ไม่เปลี่ยน):');
   const cost = prompt('ต้นทุน (ปล่อยว่าง = ไม่เปลี่ยน):');
   const status = prompt('สถานะ (ปล่อยว่าง = ไม่เปลี่ยน):');
@@ -234,18 +159,6 @@ async function handleEdit(e){
   const res = await apiPost(payload);
   if(res && res.ok){ alert('แก้ไขเรียบร้อย'); loadProducts(); } else alert('แก้ไขไม่สำเร็จ: ' + (res && res.error));
 }
-
-async function handleInOut(sku, type){
-  const q = prompt('จำนวนที่ต้องการ ' + (type==='in'?'รับเข้า':'ตัดออก') + ' (จำนวนเต็ม):');
-  if(!q) return;
-  const qty = Number(q);
-  if(Number.isNaN(qty) || qty <= 0){ alert('จำนวนไม่ถูกต้อง'); return; }
-  const s = getSession();
-  const params = { action:'history_add', adminId:s.adminId, adminPassword:s.adminPassword, sku: sku, actionType: type, qty: qty, note: (type==='in'?'รับเข้า':'ตัดออก') };
-  const res = await apiPost(params);
-  if(res && res.ok){ alert('บันทึกสำเร็จ'); loadProducts(); } else alert('ผิดพลาด: ' + (res && res.error));
-}
-
 async function handleDeleteProduct(e){
   const sku = e.target.dataset.sku;
   if(!confirm('ยืนยันการลบ ' + sku + ' ?')) return;
@@ -255,15 +168,82 @@ async function handleDeleteProduct(e){
   if(res && res.ok){ alert('ลบเรียบร้อย'); loadProducts(); } else alert('ลบไม่สำเร็จ: ' + (res && res.error));
 }
 
+// ---------- In/Out Modal (new) ----------
+function createInOutModal(){ 
+  // if exists return it
+  if(document.getElementById('inoutModal')) return document.getElementById('inoutModal');
+  const wrap = document.createElement('div');
+  wrap.id = 'inoutModal';
+  wrap.style = 'position:fixed;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.4);z-index:9999;';
+  wrap.innerHTML = `
+    <div style="width:360px;background:#fff;border-radius:6px;padding:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);">
+      <h3 id="inoutTitle" style="margin:0 0 8px 0;font-size:18px"></h3>
+      <div style="margin-bottom:8px;">
+        <label style="display:block;font-size:13px;margin-bottom:4px">จำนวน</label>
+        <input id="inoutQty" type="number" min="1" style="width:100%;padding:8px;font-size:14px" />
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:13px;margin-bottom:4px">หมายเหตุ (optional)</label>
+        <input id="inoutNote" type="text" style="width:100%;padding:8px;font-size:14px" />
+      </div>
+      <div style="text-align:right;">
+        <button id="inoutCancel" style="margin-right:8px;padding:8px 12px">ยกเลิก</button>
+        <button id="inoutConfirm" style="padding:8px 12px">ยืนยัน</button>
+      </div>
+      <div id="inoutMsg" style="margin-top:8px;font-size:13px"></div>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+  // event listeners
+  wrap.querySelector('#inoutCancel').addEventListener('click', ()=>{ wrap.style.display='none'; });
+  return wrap;
+}
+
+function openInOutModal(sku, type){
+  const modal = createInOutModal();
+  modal.style.display = 'flex';
+  document.getElementById('inoutTitle').textContent = (type==='in' ? 'รับเข้าสินค้า' : 'ตัดออกสินค้า') + ' — ' + sku;
+  const qtyEl = document.getElementById('inoutQty');
+  const noteEl = document.getElementById('inoutNote');
+  const msgEl = document.getElementById('inoutMsg');
+  qtyEl.value = '';
+  noteEl.value = '';
+  msgEl.textContent = '';
+  const confirmBtn = document.getElementById('inoutConfirm');
+  // remove previous listener by cloning (clean)
+  const newConfirm = confirmBtn.cloneNode(true);
+  confirmBtn.parentNode.replaceChild(newConfirm, confirmBtn);
+  newConfirm.addEventListener('click', async ()=>{
+    const q = Number(qtyEl.value);
+    if(!q || q <= 0){ msgEl.style.color='red'; msgEl.textContent = 'กรุณากรอกจำนวนที่ถูกต้อง (>0)'; return; }
+    newConfirm.disabled = true; newConfirm.textContent = 'กำลังบันทึก...';
+    try {
+      await performInOut(sku, type, q, noteEl.value || '');
+      msgEl.style.color='green'; msgEl.textContent = 'บันทึกสำเร็จ';
+      // small delay then close and reload
+      setTimeout(()=>{ modal.style.display='none'; newConfirm.disabled = false; newConfirm.textContent = (type==='in'?'ยืนยัน':'ยืนยัน'); loadProducts(); }, 600);
+    } catch(err){
+      console.error('InOut error', err);
+      msgEl.style.color='red'; msgEl.textContent = 'ผิดพลาด: ' + (err.message||err);
+      newConfirm.disabled = false; newConfirm.textContent = (type==='in'?'ยืนยัน':'ยืนยัน');
+    }
+  });
+}
+
+async function performInOut(sku, type, qty, note){
+  const s = getSession();
+  const params = { action:'history_add', adminId:s.adminId, adminPassword:s.adminPassword, sku: sku, actionType: type, qty: qty, note: note || '' };
+  const res = await apiPost(params);
+  if(!res || !res.ok) throw new Error(res && res.error ? res.error : 'ไม่สามารถบันทึกได้');
+  return res;
+}
+
 // ---------- Init / Events ----------
 function initAdmin(){
   initLoginUI();
-  // load products when logged in
   document.getElementById('refreshList').addEventListener('click', ()=> loadProducts(document.getElementById('searchBox').value));
   document.getElementById('searchBox').addEventListener('keydown', (e)=> { if(e.key === 'Enter') loadProducts(e.target.value); });
   document.getElementById('addForm').addEventListener('submit', handleAddProduct);
-  // attempt auto-load if session exists
   if(getSession().adminId) loadProducts();
 }
-
 document.addEventListener('DOMContentLoaded', initAdmin);
