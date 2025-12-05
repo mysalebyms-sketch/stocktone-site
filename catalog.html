@@ -1,81 +1,81 @@
+<!-- catalog.html -->
 <!doctype html>
 <html lang="th">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>StockTone — Catalog</title>
   <link rel="stylesheet" href="style.css">
   <script src="config.js"></script>
 </head>
 <body>
-  <main class="container">
-    <header class="site-header">
-      <h1>Catalog</h1>
-      <p class="muted">รายการสินค้าทั้งหมด</p>
-    </header>
-
-    <section class="card">
-      <div class="search-row">
-        <input id="q" placeholder="ค้นหาสินค้า..." />
+  <header class="site-header">
+    <div class="wrap">
+      <a class="logo" href="index.html">StockTone</a>
+      <div class="header-right">
+        <input id="searchInput" type="search" placeholder="ค้นหาสินค้า..." aria-label="search">
         <button id="btnSearch">ค้นหา</button>
       </div>
+    </div>
+  </header>
 
-      <div id="listMsg" class="muted small">ยังไม่โหลด</div>
-      <table id="catalogTable" class="table">
-        <thead>
-          <tr><th>รูป</th><th>SKU</th><th>ชื่อ</th><th>จำนวน</th><th>ต้นทุน</th><th>สถานะ</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+  <main class="wrap main-grid">
+    <aside class="filters">
+      <h3>หมวดหมู่</h3>
+      <div id="categories" class="categories"></div>
+      <hr>
+      <h4>ตัวกรอง</h4>
+      <label><input type="checkbox" id="hideOutOfStock"> ซ่อนสินค้าหมด</label>
+    </aside>
+
+    <section class="catalog">
+      <div id="catalogTop" class="catalog-top">
+        <div id="resultCount" class="result-count"></div>
+        <div class="sort">
+          <label>เรียง: 
+            <select id="sortSelect">
+              <option value="">ล่าสุด</option>
+              <option value="price_asc">ราคาต่ำ → สูง</option>
+              <option value="price_desc">ราคาสูง → ต่ำ</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div id="grid" class="product-grid" role="list">
+        <!-- cards injected here -->
+      </div>
+
+      <div id="loading" class="loading-overlay hidden">
+        <div class="spinner"></div>
+        <div class="loading-text">กำลังโหลดสินค้า...</div>
+      </div>
     </section>
-
-    <footer class="site-footer">
-      <a href="index.html">← กลับหน้าแรก</a>
-    </footer>
   </main>
 
-  <script>
-    // ใช้ APPS_SCRIPT_URL จาก config.js
-    async function apiGet(params){
-      const url = APPS_SCRIPT_URL + '?' + new URLSearchParams(params).toString();
-      const res = await fetch(url);
-      return res.json();
-    }
+  <!-- Product detail modal -->
+  <div id="productModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-panel">
+      <button class="modal-close" id="modalClose">&times;</button>
+      <div class="modal-body">
+        <div class="modal-image" id="modalImage"></div>
+        <div class="modal-info">
+          <h2 id="modalTitle"></h2>
+          <p id="modalSku" class="meta"></p>
+          <p id="modalCategory" class="meta"></p>
+          <p id="modalPrice" class="price"></p>
+          <p id="modalQty" class="meta"></p>
+          <p id="modalDesc" class="desc"></p>
+          <div class="modal-actions">
+            <input id="modalQtyInput" type="number" min="1" value="1">
+            <button id="btnAddToCart" class="btn-primary">เพิ่มลงตะกร้า</button>
+            <a id="btnOpenProduct" class="btn-outline" href="#">ดูรายละเอียด</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-    async function loadCatalog(q){
-      document.getElementById('listMsg').textContent = 'กำลังโหลด...';
-      try{
-        const params = { action:'list', limit:200 };
-        if(q) params.q = q;
-        const r = await apiGet(params);
-        if(!r.ok) { document.getElementById('listMsg').textContent = 'โหลดล้มเหลว: '+(r.error||''); return; }
-        const tbody = document.querySelector('#catalogTable tbody');
-        tbody.innerHTML = '';
-        (r.data||[]).forEach(p=>{
-          const tr = document.createElement('tr');
-          const img = document.createElement('img'); img.src = p.imageUrl || ''; img.style.width='64px'; img.style.height='64px'; img.style.objectFit='cover';
-          const imgTd = document.createElement('td'); imgTd.appendChild(img);
-          tr.appendChild(imgTd);
-          tr.innerHTML += '<td>'+ (p.sku||'') +'</td>';
-          tr.innerHTML += '<td><a href="product.html?sku='+encodeURIComponent(p.sku)+'">'+ (p.name||'') +'</a></td>';
-          tr.innerHTML += '<td>'+ (p.quantity||0) +'</td>';
-          tr.innerHTML += '<td>'+ (p.cost||'') +'</td>';
-          tr.innerHTML += '<td>'+ (p.status||'') +'</td>';
-          tbody.appendChild(tr);
-        });
-        document.getElementById('listMsg').textContent = 'โหลดสำเร็จ (' + (r.total||0) + ')';
-      }catch(err){
-        console.error(err);
-        document.getElementById('listMsg').textContent = 'ข้อผิดพลาด: '+err.message;
-      }
-    }
-
-    document.getElementById('btnSearch').addEventListener('click', ()=> loadCatalog(document.getElementById('q').value));
-    document.getElementById('q').addEventListener('keydown', (e)=> { if(e.key==='Enter') loadCatalog(e.target.value); });
-
-    // initial load
-    loadCatalog();
-  </script>
+  <script src="catalog.js"></script>
 </body>
 </html>
-
