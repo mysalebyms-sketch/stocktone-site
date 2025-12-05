@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Product — StockTone</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="config.js"></script>
+  <script defer src="product.js"></script>
+</head>
+<body>
+  <main class="container">
+    <a href="catalog.html" class="btn btn-ghost">← กลับ</a>
+    <div id="prodMsg" class="muted small">ยังไม่ได้โหลด</div>
+    <div id="prodArea" class="card hidden">
+      <div class="detail-grid">
+        <div class="detail-image"><img id="prodImage" src="assets/placeholder.png" onerror="this.src='assets/placeholder.png'"></div>
+        <div class="detail-info">
+          <h1 id="prodName"></h1>
+          <p><strong>SKU:</strong> <span id="prodSku"></span></p>
+          <p><strong>จำนวน:</strong> <span id="prodQty"></span></p>
+          <p><strong>ต้นทุน:</strong> <span id="prodCost"></span></p>
+          <p><strong>สถานะ:</strong> <span id="prodStatus"></span></p>
+          <p><strong>หมวดหมู่:</strong> <span id="prodCategory"></span></p>
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
