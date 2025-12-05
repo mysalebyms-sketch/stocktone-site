@@ -1,0 +1,66 @@
+<!-- admin.html (Full Version) -->
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Panel - StockTone</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="config.js"></script>
+</head>
+<body>
+  <div class="wrapper">
+    <header>
+      <h1>StockTone - Admin Panel</h1>
+    </header>
+
+    <!-- LOGIN SECTION -->
+    <section id="loginSection">
+      <h2>เข้าสู่ระบบผู้ดูแล</h2>
+      <label>Admin ID <input id="adminId" type="text"></label>
+      <label>Password <input id="adminPassword" type="password"></label>
+      <button id="loginBtn">เข้าสู่ระบบ</button>
+      <div id="loginMsg" class="msg"></div>
+    </section>
+
+    <!-- ADMIN AREA -->
+    <section id="adminArea" style="display:none">
+      <div class="topbar">
+        <span>ผู้ใช้: <b id="who"></b></span>
+        <button id="logoutBtn">ออกจากระบบ</button>
+      </div>
+
+      <!-- ADD PRODUCT -->
+      <h2>เพิ่มสินค้าใหม่</h2>
+      <form id="addForm">
+        <label>SKU <input name="sku" required></label>
+        <label>ชื่อสินค้า <input name="name"></label>
+        <label>จำนวน <input name="quantity" type="number" min="0" value="0"></label>
+        <label>ต้นทุน <input name="cost" type="number" min="0" value="0"></label>
+        <label>สถานะ <input name="status" value="active"></label>
+        <label>หมวดหมู่ <input name="category"></label>
+        <label>อัปโหลดรูป <input id="fileInput" type="file" accept="image/*"></label>
+        <button type="submit">เพิ่มสินค้า</button>
+      </form>
+      <div id="addMsg" class="msg"></div>
+
+      <!-- PRODUCT LIST -->
+      <h2>รายการสินค้า</h2>
+      <input id="searchBox" placeholder="ค้นหาสินค้า...">
+      <button id="refreshList">โหลดใหม่</button>
+
+      <table id="productTable">
+        <thead>
+          <tr>
+            <th>รูป</th><th>SKU</th><th>ชื่อ</th><th>จำนวน</th><th>ต้นทุน</th><th>สถานะ</th><th>จัดการ</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div id="listMsg" class="msg"></div>
+    </section>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>
