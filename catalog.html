@@ -3,54 +3,105 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Catalog - StockTone</title>
+  <title>Catalog — StockTone</title>
   <link rel="stylesheet" href="style.css">
-  <script src="config.js"></script>
+  <script src="config.js"></script> <!-- ต้องมี APPS_SCRIPT_URL -->
 </head>
 <body>
   <header class="site-header">
-    <div class="container">
-      <h1 class="logo">StockTone</h1>
-      <div class="header-actions">
-        <input id="searchInput" placeholder="ค้นหาสินค้า..." />
-        <button id="searchBtn">ค้นหา</button>
-      </div>
-    </div>
-  </header>
-
-  <main class="container main-grid">
-    <section class="filters-area">
-      <!-- future filters (category, status) -->
-      <div class="filters-row">
-        <select id="filterCategory"><option value="">หมวดหมู่ทั้งหมด</option></select>
-        <select id="filterStatus">
-          <option value="">สถานะทั้งหมด</option>
-          <option value="active">active</option>
-          <option value="deleted">deleted</option>
-          <option value="พร้อมส่ง">พร้อมส่ง</option>
-        </select>
-        <button id="clearFilters">ล้าง</button>
-      </div>
-    </section>
-    
-    <section class="catalog-area">
-      <div id="spinnerOverlay" class="spinner-overlay hidden">
-        <div class="spinner-card">
-          <div class="spinner"></div>
-          <div id="spinnerStep" class="spinner-step">กำลังโหลด...</div>
+    <div class="container header-inner">
+      <div class="brand">
+        <div class="brand-badge">🛍️</div>
+        <div>
+          <div class="site-title">StockTone</div>
+          <div class="site-sub">ระบบจัดการสินค้า — Catalog</div>
         </div>
       </div>
 
+      <div class="header-actions">
+        <input id="searchInput" class="input" placeholder="ค้นหาสินค้า..." aria-label="ค้นหาสินค้า">
+        <button id="searchBtn" class="btn">ค้นหา</button>
+      </div>
+    </div>
+
+    <nav class="nav-bar">
+      <div class="container nav-inner">
+        <button class="nav-btn active" data-target="catalog.html" id="navCatalog">Catalog</button>
+        <button class="nav-btn" data-target="history.html" id="navHistory">History</button>
+        <button class="nav-btn" data-target="admin.html" id="navAdmin">Admin</button>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container main-grid catalog-grid-wrap">
+    <aside class="filters card">
+      <div class="catalog-controls">
+        <div class="row" style="margin-bottom:10px">
+          <select id="filterCategory" class="select" aria-label="หมวดหมู่">
+            <option value="">หมวดหมู่ทั้งหมด</option>
+          </select>
+        </div>
+        <div class="row" style="margin-bottom:12px">
+          <select id="filterStatus" class="select" aria-label="สถานะ">
+            <option value="">สถานะทั้งหมด</option>
+            <option value="active">active</option>
+            <option value="พร้อมส่ง">พร้อมส่ง</option>
+            <option value="deleted">deleted</option>
+          </select>
+        </div>
+        <div class="row">
+          <button id="clearFilters" class="btn btn-ghost">ล้าง</button>
+        </div>
+      </div>
+    </aside>
+
+    <section class="catalog card" id="catalogSection" aria-live="polite">
+      <div class="catalog-top">
+        <div class="result-count" id="resultCount">กำลังโหลด...</div>
+        <div class="controls"></div>
       </div>
 
-      <div id="catalogMsg" class="muted" style="padding:12px 0"></div>
+      <div id="spinnerOverlay" class="spinner-overlay hidden" aria-hidden="true">
+        <div class="spinner" role="status" aria-live="polite"></div>
+        <div class="spinner-text" id="spinnerStep">กำลังโหลด...</div>
+      </div>
+
+      <div id="cards" class="catalog-grid"></div>
+
+      <div id="catalogMsg" class="muted empty" style="padding:18px 0"></div>
     </section>
   </main>
 
-  <footer class="container footer">
+  <!-- detail modal placeholder -->
+  <div id="catalogDetailModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-panel">
+      <button class="modal-close" aria-label="ปิด">✕</button>
+      <div class="detail-grid">
+        <div class="detail-image"><img src="" alt=""></div>
+        <div class="detail-info">
+          <h2 class="detail-title"></h2>
+          <div class="detail-price"></div>
+          <div class="detail-status muted small"></div>
+          <p class="detail-desc"></p>
+          <div class="detail-actions">
+            <button class="btn btn-primary add-cart">+ เพิ่มในตะกร้า</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer container">
     <small>StockTone — catalog view</small>
   </footer>
 
+  <!-- your catalog.js should exist and implement loadProducts / modal / spinner wiring -->
   <script src="catalog.js"></script>
+  <script>
+    // small nav wiring to switch to different pages (simple redirect)
+    document.getElementById('navCatalog').addEventListener('click', ()=> location.href='catalog.html');
+    document.getElementById('navHistory').addEventListener('click', ()=> location.href='history.html');
+    document.getElementById('navAdmin').addEventListener('click', ()=> location.href='admin.html');
+  </script>
 </body>
 </html>
