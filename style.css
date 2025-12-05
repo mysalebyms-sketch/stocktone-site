@@ -468,4 +468,34 @@ button[disabled], .btn[disabled]{opacity:0.6;cursor:not-allowed}
   .grid-2{ grid-template-columns:1fr; }
   .modal-panel{ width:95% }
 }
+/* กำหนดให้ภาพสินค้าเป็นสัดส่วนเท่ากัน */
+.product-card img {
+    width: 100%;
+    height: 220px;        /* สามารถปรับ 180–260 ได้ตามต้องการ */
+    object-fit: cover;    /* ครอปภาพให้เต็มพื้นที่แบบมืออาชีพ */
+    border-radius: 12px;
+    background: #f4f4f4;
+}
+
+/* card layout ให้เป็นเหมือน mobile UI */
+.product-card {
+    background: #fff;
+    border-radius: 15px;
+    padding: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    margin-bottom: 25px;
+}
+
+/* ชื่อสินค้าให้เด่นขึ้น */
+.product-title {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+/* ราคาให้ชัด */
+.product-price {
+    font-size: 20px;
+    font-weight: 700;
+    color: #ff8c00;
+}
 
