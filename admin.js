@@ -1,350 +1,269 @@
-// File: admin.js (Full working admin frontend)
-// Minimal comments only where necessary (why).
-// Requires: config.js providing `APPS_SCRIPT_URL` (set by you).
+/*
+ admin.js - StockTone Admin Panel (Full)
+ Assumes: admin.html structure + config.js (APPS_SCRIPT_URL)
+ Minimal, readable, maintainable. (Thai UI)
+*/
 
-/* ---------------------------
-   Utilities
-   --------------------------- */
-function $q(sel){ return document.querySelector(sel); }
-function $qa(sel){ return Array.from(document.querySelectorAll(sel)); }
-function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+// ---------- Utilities ----------
+function esc(s){ return String(s==null?'':s).replace(/[&<>"'`=\\/]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;','=':'&#61;','/':'&#47;','\\':'\\\\'}[c]; }); }
 
-// session helpers
-function setSession(s){ sessionStorage.setItem('st_session', JSON.stringify(s)); }
-function getSession(){ try { return JSON.parse(sessionStorage.getItem('st_session')); } catch(e){ return null; } }
-function clearSession(){ sessionStorage.removeItem('st_session'); }
-
-/* ---------------------------
-   UI elements
-   --------------------------- */
-const el = {
-  loginSection: $q('#loginSection'),
-  adminArea: $q('#adminArea'),
-  loginBtn: $q('#loginBtn'),
-  logoutBtn: $q('#logoutBtn'),
-  adminId: $q('#adminId'),
-  adminPassword: $q('#adminPassword'),
-  who: $q('#who'),
-  addForm: $q('#addForm'),
-  addMsg: $q('#addMsg'),
-  fileInput: $q('#fileInput'),
-  refreshList: $q('#refreshList'),
-  searchBox: $q('#searchBox'),
-  productTableBody: $q('#productTable tbody'),
-  listMsg: $q('#listMsg')
-};
-
-/* ---------------------------
-   Initialization & login flow
-   --------------------------- */
-(function init(){
-  const s = getSession();
-  if(s && s.adminId && s.adminPassword){
-    showAdmin(s);
-    loadProducts(); // initial load
-  } else {
-    showLogin();
-  }
-})();
-
-el.loginBtn.addEventListener('click', async ()=>{
-  const adminId = (el.adminId.value||'').trim();
-  const adminPassword = (el.adminPassword.value||'').trim();
-  if(!adminId || !adminPassword){ alert('กรุณากรอก Admin ID และ Password'); return; }
-  // Quick test auth by calling list with credentials
-  try {
-    const res = await fetch(`${APPS_SCRIPT_URL}?action=list&limit=1&adminId=${encodeURIComponent(adminId)}&adminPassword=${encodeURIComponent(adminPassword)}`);
-    const j = await res.json();
-    if(j && j.ok){
-      setSession({adminId, adminPassword});
-      showAdmin({adminId, adminPassword});
-      loadProducts();
-    } else {
-      alert('Login failed: ' + (j && j.error ? j.error : 'unknown'));
-    }
-  } catch(err){
-    console.error(err);
-    alert('Network error during login');
-  }
-});
-
-el.logoutBtn.addEventListener('click', ()=>{
-  clearSession();
-  location.reload();
-});
-
-function showLogin(){
-  el.loginSection.style.display = 'block';
-  el.adminArea.style.display = 'none';
-}
-function showAdmin(sess){
-  el.loginSection.style.display = 'none';
-  el.adminArea.style.display = 'block';
-  el.who.textContent = sess.adminId;
+function showMsg(id, msg, isError){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.textContent = msg || '';
+  el.style.color = isError ? 'red' : 'green';
 }
 
-/* ---------------------------
-   Upload image -> Apps Script (base64)
-   - returns imageUrl or throws
-   Why: centralizes upload logic and error handling.
-   --------------------------- */
-async function uploadImage(file){
-  if(!file) return '';
-  // Basic client-side checks
-  if(file.size > 8 * 1024 * 1024) throw new Error('File too large (max 8MB)');
-  const allowed = ['image/png','image/jpeg','image/webp','image/gif'];
-  if(file.type && !allowed.includes(file.type)) {
-    // still try, but warn
-    console.warn('Unusual contentType', file.type);
-  }
-  // read as base64
-  const base64 = await new Promise((resolve, reject)=>{
-    const r = new FileReader();
-    r.onload = ()=> resolve(String(r.result).split(',',2)[1] || '');
-    r.onerror = e => reject(e);
-    r.readAsDataURL(file);
-  });
-  if(!base64) throw new Error('Cannot read file');
-  const sess = getSession();
-  if(!sess) throw new Error('Not authenticated');
+// ---------- Config / Session ----------
+if(typeof APPS_SCRIPT_URL === 'undefined') console.warn('APPS_SCRIPT_URL not defined - set config.js');
 
-  const payload = {
-    action: 'upload_image',
-    adminId: sess.adminId,
-    adminPassword: sess.adminPassword,
-    filename: file.name,
-    contentType: file.type || 'image/png',
-    base64: base64
+function saveSession(adminId, adminPassword){
+  sessionStorage.setItem('adminId', adminId);
+  sessionStorage.setItem('adminPassword', adminPassword);
+}
+function clearSession(){
+  sessionStorage.removeItem('adminId');
+  sessionStorage.removeItem('adminPassword');
+}
+function getSession(){
+  return {
+    adminId: sessionStorage.getItem('adminId') || '',
+    adminPassword: sessionStorage.getItem('adminPassword') || ''
   };
+}
+
+// ---------- Upload helper (no custom Content-Type -> avoid preflight) ----------
+async function uploadImage(file, opts = {}){
+  if(!file) throw new Error('No file provided');
+  const adminId = opts.adminId || getSession().adminId || '';
+  const adminPassword = opts.adminPassword || getSession().adminPassword || '';
+  const sku = opts.sku || '';
+
+  // Read file as base64
+  const base64 = await new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result.split(',')[1]);
+    fr.onerror = reject;
+    fr.readAsDataURL(file);
+  });
+
+  const params = new URLSearchParams();
+  params.append('action','upload_image');
+  params.append('adminId', adminId);
+  params.append('adminPassword', adminPassword);
+  params.append('filename', file.name);
+  params.append('contentType', file.type || 'image/png');
+  params.append('base64', base64);
+  if(sku) params.append('sku', sku);
 
   const resp = await fetch(APPS_SCRIPT_URL + '?action=upload_image', {
     method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify(payload)
-  });
-  const j = await resp.json();
-  if(!j || !j.ok) {
-    const err = (j && j.error) ? j.error : 'upload_failed';
-    throw new Error(err + (j && j.detail ? (': '+j.detail) : ''));
-  }
-  return j.imageUrl;
-}
-
-/* ---------------------------
-   Add product (with optional image upload)
-   --------------------------- */
-el.addForm.addEventListener('submit', async function(ev){
-  ev.preventDefault();
-  el.addMsg.textContent = '';
-  const fd = new FormData(el.addForm);
-  const sku = (fd.get('sku')||'').trim();
-  if(!sku){ el.addMsg.textContent = 'SKU required'; return; }
-  const session = getSession();
-  if(!session){ alert('Not logged in'); return; }
-
-  // Validate numeric fields
-  const quantity = Number(fd.get('quantity') || 0);
-  const cost = Number(fd.get('cost') || 0);
-  if(Number.isNaN(quantity) || quantity < 0){ el.addMsg.textContent='Invalid quantity'; return; }
-  if(Number.isNaN(cost) || cost < 0){ el.addMsg.textContent='Invalid cost'; return; }
-
-  // Upload image first if selected
-  let imageUrl = '';
-  const file = el.fileInput.files[0];
-  if(file){
-    el.addMsg.textContent = 'กำลังอัปโหลดรูป...';
-    try{
-      imageUrl = await uploadImage(file);
-    } catch(err){
-      console.error(err);
-      el.addMsg.textContent = 'อัปโหลดรูปไม่สำเร็จ: ' + err.message;
-      return;
-    }
-  }
-
-  // Now call add
-  const params = new URLSearchParams();
-  params.append('action','add');
-  params.append('adminId', session.adminId);
-  params.append('adminPassword', session.adminPassword);
-  params.append('sku', sku);
-  params.append('name', fd.get('name') || '');
-  params.append('quantity', String(quantity));
-  params.append('cost', String(cost));
-  params.append('status', fd.get('status') || '');
-  params.append('imageUrl', imageUrl || '');
-  params.append('category', fd.get('category') || '');
-
-  try{
-    el.addMsg.textContent = 'กำลังเพิ่มสินค้า...';
-    const res = await fetch(APPS_SCRIPT_URL + '?' + params.toString());
-    const j = await res.json();
-    if(j && j.ok){
-      el.addMsg.style.color = 'green';
-      el.addMsg.textContent = 'เพิ่มสินค้าเรียบร้อย';
-      el.addForm.reset();
-      loadProducts();
-      setTimeout(()=> el.addMsg.textContent = '', 3000);
-    } else {
-      el.addMsg.style.color = 'red';
-      el.addMsg.textContent = 'Add failed: ' + (j && j.error? j.error : 'unknown');
-    }
-  } catch(err){
-    console.error(err);
-    el.addMsg.style.color = 'red';
-    el.addMsg.textContent = 'Network error';
-  }
-});
-
-/* ---------------------------
-   Load products & render table
-   --------------------------- */
-el.refreshList.addEventListener('click', ()=> loadProducts());
-el.searchBox.addEventListener('keyup', (e)=> {
-  if(e.key === 'Enter') loadProducts();
-});
-
-async function loadProducts(){
-  el.listMsg.textContent = 'Loading...';
-  const q = (el.searchBox.value||'').trim();
-  const params = new URLSearchParams();
-  params.append('action','list');
-  params.append('limit','500');
-  if(q) params.append('q', q);
-
-  try {
-    const res = await fetch(APPS_SCRIPT_URL + '?' + params.toString());
-    const j = await res.json();
-    if(!j || !j.ok){ el.listMsg.textContent = 'Load failed'; return; }
-    renderProducts(j.data || []);
-    el.listMsg.textContent = '';
-  } catch(err){
-    console.error(err);
-    el.listMsg.textContent = 'Network error';
-  }
-}
-
-function renderProducts(items){
-  el.productTableBody.innerHTML = '';
-  if(!items || items.length === 0){
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td colspan="7" style="padding:12px">ไม่มีสินค้า</td>`;
-    el.productTableBody.appendChild(tr);
-    return;
-  }
-  items.forEach(it=>{
-    const tr = document.createElement('tr');
-    const imgHtml = it.imageUrl ? `<img src="${esc(it.imageUrl)}" class="thumb" alt="thumb">` : '';
-    const sku = esc(it.sku);
-    const name = esc(it.name);
-    const qty = esc(it.quantity);
-    const cost = esc(it.cost);
-    const status = esc(it.status);
-    tr.innerHTML = `
-      <td>${imgHtml}</td>
-      <td>${sku}</td>
-      <td>${name}</td>
-      <td>${qty}</td>
-      <td>${cost}</td>
-      <td>${status}</td>
-      <td>
-        <button class="btn-edit" data-sku="${sku}">แก้ไข</button>
-        <button class="btn-in" data-sku="${sku}">รับเข้า</button>
-        <button class="btn-out" data-sku="${sku}">ตัดออก</button>
-        <button class="btn-delete" data-sku="${sku}">ลบ</button>
-      </td>
-    `;
-    el.productTableBody.appendChild(tr);
+    body: params
   });
 
-  // attach event handlers (delegation-style)
-  $qa('.btn-edit').forEach(b => b.onclick = () => onEdit(b.dataset.sku));
-  $qa('.btn-delete').forEach(b => b.onclick = () => onDelete(b.dataset.sku));
-  $qa('.btn-in').forEach(b => b.onclick = () => onInOut(b.dataset.sku, 'in'));
-  $qa('.btn-out').forEach(b => b.onclick = () => onInOut(b.dataset.sku, 'out'));
+  const text = await resp.text();
+  try { return JSON.parse(text); } catch(e){ throw new Error('Invalid response: ' + text); }
 }
 
-/* ---------------------------
-   Edit / Delete / In-Out handlers
-   --------------------------- */
-async function onEdit(sku){
-  // simple inline prompt edit (name, cost, status)
-  try {
-    const newName = prompt('ชื่อใหม่ (leave empty จะไม่เปลี่ยน)', '');
-    if(newName === null) return; // cancelled
-    const newCost = prompt('ต้นทุน (leave empty จะไม่เปลี่ยน)', '');
-    const newStatus = prompt('สถานะ (leave empty จะไม่เปลี่ยน)', '');
-    const params = new URLSearchParams();
-    params.append('action','update');
+// ---------- API helpers ----------
+async function apiGet(params){
+  const url = APPS_SCRIPT_URL + '?' + new URLSearchParams(params).toString();
+  const r = await fetch(url);
+  return r.json();
+}
+async function apiPost(paramsObj){
+  const url = APPS_SCRIPT_URL + '?' + (paramsObj.action ? 'action=' + encodeURIComponent(paramsObj.action) : '');
+  // For add/update/delete we use GET-like query (works) or POST simple
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
+    body: new URLSearchParams(paramsObj)
+  });
+  return r.json();
+}
+
+// ---------- UI: Login / Logout ----------
+function initLoginUI(){
+  const loginBtn = document.getElementById('loginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const who = document.getElementById('who');
+  const loginSection = document.getElementById('loginSection');
+  const adminArea = document.getElementById('adminArea');
+
+  function updateState(){
     const s = getSession();
-    params.append('adminId', s.adminId);
-    params.append('adminPassword', s.adminPassword);
-    params.append('sku', sku);
-    if(newName) params.append('name', newName);
-    if(newCost) params.append('cost', newCost);
-    if(newStatus) params.append('status', newStatus);
-    const res = await fetch(APPS_SCRIPT_URL + '?' + params.toString());
-    const j = await res.json();
-    if(j && j.ok) loadProducts();
-    else alert('Update failed: ' + (j && j.error ? j.error : 'unknown'));
+    if(s.adminId && s.adminPassword){
+      loginSection.style.display = 'none';
+      adminArea.style.display = 'block';
+      who.textContent = esc(s.adminId);
+    } else {
+      loginSection.style.display = 'block';
+      adminArea.style.display = 'none';
+      who.textContent = '';
+    }
+  }
+
+  loginBtn.addEventListener('click', async ()=>{
+    const adminId = document.getElementById('adminId').value.trim();
+    const adminPassword = document.getElementById('adminPassword').value.trim();
+    if(!adminId || !adminPassword){ showMsg('loginMsg','กรุณากรอก Admin ID และ Password', true); return; }
+    // quick check by calling list with credentials (server validates on write ops; we just store)
+    saveSession(adminId, adminPassword);
+    showMsg('loginMsg','เข้าสู่ระบบ...', false);
+    updateState();
+    await loadProducts();
+    showMsg('loginMsg','เข้าสู่ระบบเรียบร้อย', false);
+  });
+
+  logoutBtn.addEventListener('click', ()=>{
+    clearSession();
+    updateState();
+  });
+
+  updateState();
+}
+
+// ---------- UI: Products list ----------
+async function loadProducts(q){
+  const tbody = document.querySelector('#productTable tbody');
+  tbody.innerHTML = '';
+  showMsg('listMsg','กำลังโหลด...', false);
+  try {
+    const params = { action:'list', limit:500 };
+    if(q) params.q = q;
+    const res = await apiGet(params);
+    if(!res.ok){ showMsg('listMsg','โหลดรายการผิดพลาด', true); return; }
+    const data = res.data || [];
+    if(data.length === 0){ showMsg('listMsg','ไม่มีสินค้า', true); return; }
+    data.forEach(p => {
+      const tr = document.createElement('tr');
+      const imgUrl = p.imageUrl ? esc(p.imageUrl) : '';
+      tr.innerHTML = `
+        <td>${imgUrl ? '<img src="'+imgUrl+'" style="width:80px;height:80px;object-fit:contain"/>':''}</td>
+        <td>${esc(p.sku)}</td>
+        <td>${esc(p.name)}</td>
+        <td>${esc(p.quantity)}</td>
+        <td>${esc(p.cost)}</td>
+        <td>${esc(p.status)}</td>
+        <td>
+          <button class="btn-edit" data-sku="${esc(p.sku)}">แก้ไข</button>
+          <button class="btn-in" data-sku="${esc(p.sku)}">รับเข้า</button>
+          <button class="btn-out" data-sku="${esc(p.sku)}">ตัดออก</button>
+          <button class="btn-delete" data-sku="${esc(p.sku)}">ลบ</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+    attachRowEvents();
+    showMsg('listMsg','โหลดสำเร็จ', false);
   } catch(err){
-    console.error(err); alert('Network error');
+    console.error('loadProducts error', err);
+    showMsg('listMsg','โหลดรายการผิดพลาด: ' + err.message, true);
   }
 }
 
-async function onDelete(sku){
-  if(!confirm('ลบสินค้า ' + sku + ' ?')) return;
-  const s = getSession();
-  const params = new URLSearchParams();
-  params.append('action','delete');
-  params.append('adminId', s.adminId);
-  params.append('adminPassword', s.adminPassword);
-  params.append('sku', sku);
-  try{
-    const res = await fetch(APPS_SCRIPT_URL + '?' + params.toString());
-    const j = await res.json();
-    if(j && j.ok) loadProducts(); else alert('Delete failed: ' + (j && j.error? j.error : 'unknown'));
-  } catch(err){ console.error(err); alert('Network error'); }
+function attachRowEvents(){
+  document.querySelectorAll('.btn-edit').forEach(b => b.onclick = handleEdit);
+  document.querySelectorAll('.btn-in').forEach(b => b.onclick = ()=>handleInOut(b.dataset.sku, 'in'));
+  document.querySelectorAll('.btn-out').forEach(b => b.onclick = ()=>handleInOut(b.dataset.sku, 'out'));
+  document.querySelectorAll('.btn-delete').forEach(b => b.onclick = handleDeleteProduct);
 }
 
-async function onInOut(sku, type){
-  const qtyStr = prompt(`${type === 'in' ? 'จำนวนรับเข้า' : 'จำนวนตัดออก'}:`, '1');
-  if(qtyStr === null) return;
-  const qty = Number(qtyStr);
-  if(Number.isNaN(qty) || qty <= 0){ alert('จำนวนไม่ถูกต้อง'); return; }
-  const note = prompt('หมายเหตุ (optional)', '') || '';
-  const s = getSession();
-  const params = new URLSearchParams();
-  params.append('action','history_add');
-  params.append('adminId', s.adminId);
-  params.append('adminPassword', s.adminPassword);
-  params.append('sku', sku);
-  params.append('actionType', type);
-  params.append('qty', String(qty));
-  params.append('note', note);
+// ---------- Add product ----------
+async function handleAddProduct(evt){
+  evt.preventDefault();
+  const form = document.getElementById('addForm');
+  const fd = new FormData(form);
+  const sku = (fd.get('sku')||'').trim();
+  if(!sku){ showMsg('addMsg','SKU ต้องไม่ว่าง', true); return; }
+  const name = fd.get('name')||'';
+  const quantity = Number(fd.get('quantity')||0);
+  const cost = Number(fd.get('cost')||0);
+  const status = fd.get('status') || '';
+  const category = fd.get('category') || '';
+  const fileInput = document.getElementById('fileInput');
+  const file = fileInput && fileInput.files && fileInput.files[0];
+
+  showMsg('addMsg','กำลังเพิ่มสินค้า...', false);
   try {
-    const res = await fetch(APPS_SCRIPT_URL + '?' + params.toString());
-    const j = await res.json();
-    if(j && j.ok) loadProducts();
-    else alert('Operation failed: ' + (j && j.error? j.error : 'unknown'));
-  } catch(err){ console.error(err); alert('Network error'); }
+    // If file present, upload first to get imageUrl
+    let imageUrl = '';
+    if(file){
+      const up = await uploadImage(file, { sku: sku }); // uses session credentials
+      if(!up || !up.ok) { showMsg('addMsg','อัปโหลดรูปไม่สำเร็จ', true); return; }
+      imageUrl = up.imageUrl || '';
+    }
+
+    // call add
+    const s = getSession();
+    const params = {
+      action: 'add',
+      adminId: s.adminId,
+      adminPassword: s.adminPassword,
+      sku: sku, name: name, quantity: quantity, cost: cost,
+      status: status, imageUrl: imageUrl, category: category
+    };
+    const res = await apiPost(params);
+    if(res && res.ok){
+      showMsg('addMsg','เพิ่มสินค้าเรียบร้อย', false);
+      form.reset();
+      await loadProducts();
+    } else {
+      showMsg('addMsg','เพิ่มสินค้าไม่สำเร็จ: ' + (res && res.error || 'unknown'), true);
+    }
+  } catch(err){
+    console.error(err);
+    showMsg('addMsg','เพิ่มสินค้าไม่สำเร็จ: ' + err.message, true);
+  }
 }
 
-/* ---------------------------
-   Optional: quick debug helper (expose to window)
-   --------------------------- */
-window.ST = {
-  loadProducts,
-  uploadImage
-};
+// ---------- Edit / In/Out / Delete ----------
+async function handleEdit(e){
+  const sku = e.target.dataset.sku;
+  // simple prompt-based edit for brevity
+  const name = prompt('ชื่อสินค้าใหม่ (ปล่อยว่าง = ไม่เปลี่ยน):');
+  const cost = prompt('ต้นทุน (ปล่อยว่าง = ไม่เปลี่ยน):');
+  const status = prompt('สถานะ (ปล่อยว่าง = ไม่เปลี่ยน):');
+  const qty = prompt('จำนวน (ปล่อยว่าง = ไม่เปลี่ยน):');
+  const s = getSession();
+  const payload = { action:'update', adminId:s.adminId, adminPassword:s.adminPassword, sku: sku };
+  if(name) payload.name = name;
+  if(cost) payload.cost = Number(cost);
+  if(status) payload.status = status;
+  if(qty) payload.quantity = Number(qty);
+  const res = await apiPost(payload);
+  if(res && res.ok){ alert('แก้ไขเรียบร้อย'); loadProducts(); } else alert('แก้ไขไม่สำเร็จ: ' + (res && res.error));
+}
 
-/* ---------------------------
-   End of admin.js
-   --------------------------- */
+async function handleInOut(sku, type){
+  const q = prompt('จำนวนที่ต้องการ ' + (type==='in'?'รับเข้า':'ตัดออก') + ' (จำนวนเต็ม):');
+  if(!q) return;
+  const qty = Number(q);
+  if(Number.isNaN(qty) || qty <= 0){ alert('จำนวนไม่ถูกต้อง'); return; }
+  const s = getSession();
+  const params = { action:'history_add', adminId:s.adminId, adminPassword:s.adminPassword, sku: sku, actionType: type, qty: qty, note: (type==='in'?'รับเข้า':'ตัดออก') };
+  const res = await apiPost(params);
+  if(res && res.ok){ alert('บันทึกสำเร็จ'); loadProducts(); } else alert('ผิดพลาด: ' + (res && res.error));
+}
 
-/*
-  NOTE about test image available in this session:
-  If you want to test upload with a local sample file that was uploaded here,
-  the path is: /mnt/data/97f24d84-7019-4ff3-9506-4e0311a4e9e4.png
-  (Use the file picker on the page to pick a real file from your computer when testing.)
-*/
+async function handleDeleteProduct(e){
+  const sku = e.target.dataset.sku;
+  if(!confirm('ยืนยันการลบ ' + sku + ' ?')) return;
+  const s = getSession();
+  const params = { action:'delete', adminId:s.adminId, adminPassword:s.adminPassword, sku: sku };
+  const res = await apiPost(params);
+  if(res && res.ok){ alert('ลบเรียบร้อย'); loadProducts(); } else alert('ลบไม่สำเร็จ: ' + (res && res.error));
+}
+
+// ---------- Init / Events ----------
+function initAdmin(){
+  initLoginUI();
+  // load products when logged in
+  document.getElementById('refreshList').addEventListener('click', ()=> loadProducts(document.getElementById('searchBox').value));
+  document.getElementById('searchBox').addEventListener('keydown', (e)=> { if(e.key === 'Enter') loadProducts(e.target.value); });
+  document.getElementById('addForm').addEventListener('submit', handleAddProduct);
+  // attempt auto-load if session exists
+  if(getSession().adminId) loadProducts();
+}
+
+document.addEventListener('DOMContentLoaded', initAdmin);
