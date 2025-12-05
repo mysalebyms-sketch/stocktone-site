@@ -1,188 +1,217 @@
-/* catalog.js - Hybrid Grid Catalog (mobile 2 col / desktop 4 col) */
-/* Requires config.js which defines APPS_SCRIPT_URL */
+// catalog.js
+// ต้องการ config.js ที่ประกาศ APPS_SCRIPT_URL
 
-const catalogState = {
-  items: [],
-  categories: new Set(),
-  q: '',
-  sort: '',
-  hideOutOfStock: false,
-};
+(function(){
+  // settings
+  const LIMIT = 24; // จำนวนต่อหน้า
+  let OFFSET = 0;
+  let totalLoaded = 0;
+  let lastQuery = '';
+  let lastFilters = { status:'', category:'' };
 
-function el(q){ return document.querySelector(q); }
-function show(elm){ elm && elm.classList.remove('hidden'); }
-function hide(elm){ elm && elm.classList.add('hidden'); }
-
-async function apiGet(params){
-  const url = APPS_SCRIPT_URL + '?' + new URLSearchParams(params).toString();
-  const res = await fetch(url);
-  return res.json();
-}
-
-function formatPrice(v){ return (v==null || v==='') ? '-' : (Number(v).toLocaleString('en-US') ); }
-
-function renderCategories(){
-  const container = el('#categories');
-  if(!container) return;
-  container.innerHTML = '';
-  const allBtn = document.createElement('button');
-  allBtn.className = 'chip active';
-  allBtn.textContent = 'ทั้งหมด';
-  allBtn.onclick = ()=> { filterByCategory(''); };
-  container.appendChild(allBtn);
-
-  Array.from(catalogState.categories).sort().forEach(cat=>{
-    const b = document.createElement('button');
-    b.className = 'chip';
-    b.textContent = cat || 'ทั่วไป';
-    b.dataset.cat = cat;
-    b.onclick = ()=> filterByCategory(cat);
-    container.appendChild(b);
-  });
-}
-
-function filterByCategory(cat){
-  catalogState.q = '';
-  el('#searchInput').value = '';
-  document.querySelectorAll('#categories .chip').forEach(x => x.classList.remove('active'));
-  document.querySelectorAll(`#categories .chip`).forEach(ch=>{
-    if(ch.dataset.cat === cat || (cat === '' && ch.textContent === 'ทั้งหมด')) ch.classList.add('active');
-  });
-  loadProducts(cat);
-}
-
-function renderGrid(items){
-  const grid = el('#grid');
-  grid.innerHTML = '';
-  if(!items || items.length === 0){
-    grid.innerHTML = `<div class="empty">ไม่พบสินค้า</div>`;
-    el('#resultCount').textContent = '0 รายการ';
-    return;
+  // helpers
+  function el(id){ return document.getElementById(id); }
+  function show(elem){ elem.classList.remove('hidden'); }
+  function hide(elem){ elem.classList.add('hidden'); }
+  function setSpinner(text){
+    const over = el('spinnerOverlay');
+    const txt = el('spinnerText');
+    txt && (txt.textContent = text || 'กำลังโหลด...');
+    show(over);
   }
-  el('#resultCount').textContent = items.length + ' รายการ';
-  items.forEach(p=>{
-    const card = document.createElement('article');
-    card.className = 'card';
-    card.setAttribute('role','listitem');
+  function clearSpinner(){ hide(el('spinnerOverlay')); }
+
+  async function apiGet(params){
+    if(typeof APPS_SCRIPT_URL === 'undefined') throw new Error('APPS_SCRIPT_URL not configured (config.js)');
+    const url = APPS_SCRIPT_URL + '?' + new URLSearchParams(params).toString();
+    const r = await fetch(url);
+    if(!r.ok) throw new Error('Network error: ' + r.status);
+    return r.json();
+  }
+
+  // render single card
+  function renderCard(p){
+    const div = document.createElement('div');
+    div.className = 'card product-card';
+    div.dataset.sku = p.sku || '';
 
     const imgWrap = document.createElement('div');
-    imgWrap.className = 'card-image';
-    if(p.imageUrl){
-      const img = document.createElement('img');
-      img.src = p.imageUrl;
-      img.alt = p.name || p.sku;
-      img.loading = 'lazy';
-      imgWrap.appendChild(img);
-    } else {
-      imgWrap.innerHTML = '<div class="placeholder">ไม่มีรูป</div>';
-    }
+    imgWrap.className = 'thumb';
+    const img = document.createElement('img');
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.alt = p.name || p.sku || 'product';
+    img.src = (p.imageUrl && p.imageUrl.length) ? p.imageUrl : 'assets/placeholder.png';
+    img.onerror = function(){ this.src = 'assets/placeholder.png'; };
+    imgWrap.appendChild(img);
 
     const body = document.createElement('div');
     body.className = 'card-body';
-    const name = document.createElement('h3');
-    name.textContent = p.name || '-';
+    const title = document.createElement('div');
+    title.className = 'prod-title';
+    title.textContent = p.name || '-';
     const sku = document.createElement('div');
-    sku.className = 'muted small'; sku.textContent = p.sku;
-    const price = document.createElement('div');
-    price.className = 'card-price'; price.textContent = formatPrice(p.cost) + ' ฿';
-    const footer = document.createElement('div');
-    footer.className = 'card-footer';
+    sku.className = 'prod-sku';
+    sku.textContent = p.sku || '';
+
+    const meta = document.createElement('div');
+    meta.className = 'prod-meta';
+    const qty = document.createElement('div'); qty.className='meta-item'; qty.textContent = (p.quantity || 0);
+    const cost = document.createElement('div'); cost.className='meta-item'; cost.textContent = (p.cost || 0);
+    const status = document.createElement('div'); status.className='status'; status.textContent = p.status || '';
+
+    meta.appendChild(qty);
+    meta.appendChild(cost);
+    meta.appendChild(status);
+
+    const foot = document.createElement('div');
+    foot.className = 'card-foot';
     const btnView = document.createElement('button');
-    btnView.className = 'btn-outline'; btnView.textContent = 'ดู';
-    btnView.onclick = ()=> openProductModal(p);
-    const btnAdd = document.createElement('button');
-    btnAdd.className = 'btn-primary sm'; btnAdd.textContent = '+';
-    btnAdd.onclick = ()=> {
-      // simple local add action (future: call API/cart)
-      btnAdd.disabled = true; btnAdd.textContent = '✓';
-      setTimeout(()=>{ btnAdd.disabled=false; btnAdd.textContent='+'; }, 700);
-    };
+    btnView.className = 'btn btn-sm';
+    btnView.textContent = 'ดู';
+    btnView.addEventListener('click', ()=> openDetail(p.sku));
+    foot.appendChild(btnView);
 
-    footer.appendChild(btnView);
-    footer.appendChild(btnAdd);
-
-    body.appendChild(name);
+    body.appendChild(title);
     body.appendChild(sku);
-    body.appendChild(price);
-    body.appendChild(footer);
+    body.appendChild(meta);
 
-    card.appendChild(imgWrap);
-    card.appendChild(body);
-    grid.appendChild(card);
-
-    // category collect
-    if(p.category) catalogState.categories.add(p.category);
-  });
-
-  renderCategories();
-}
-
-function openProductModal(product){
-  const modal = el('#productModal');
-  show(modal);
-  el('#modalTitle').textContent = product.name || product.sku;
-  el('#modalSku').textContent = 'SKU: ' + (product.sku||'');
-  el('#modalCategory').textContent = 'หมวด: ' + (product.category || '-');
-  el('#modalPrice').textContent = 'ราคา: ' + formatPrice(product.cost) + ' ฿';
-  el('#modalQty').textContent = 'คงเหลือ: ' + (product.quantity || 0);
-  el('#modalDesc').textContent = product.description || '';
-  el('#modalImage').innerHTML = '';
-  if(product.imageUrl){
-    const img = document.createElement('img'); img.src = product.imageUrl; img.alt = product.name || product.sku;
-    el('#modalImage').appendChild(img);
+    div.appendChild(imgWrap);
+    div.appendChild(body);
+    div.appendChild(foot);
+    return div;
   }
-  el('#modalClose').onclick = ()=> hide(modal);
-  el('#btnOpenProduct').href = 'product.html?sku=' + encodeURIComponent(product.sku || '');
-  el('#btnAddToCart').onclick = ()=> {
-    const qty = Number(el('#modalQtyInput').value || 1);
-    alert('เพิ่ม ' + qty + ' ชิ้น ลงตะกร้า (demo)');
-  };
-}
 
-function wireUI(){
-  el('#btnSearch').addEventListener('click', ()=> {
-    const q = el('#searchInput').value.trim();
-    catalogState.q = q;
-    loadProducts();
-  });
-  el('#searchInput').addEventListener('keydown', (e)=> { if(e.key === 'Enter'){ catalogState.q = el('#searchInput').value.trim(); loadProducts(); }});
-  el('#sortSelect').addEventListener('change', (e)=> { catalogState.sort = e.target.value; loadProducts(); });
-  el('#hideOutOfStock').addEventListener('change', (e)=> { catalogState.hideOutOfStock = e.target.checked; loadProducts(); });
-  el('#modalClose').addEventListener('click', ()=> hide(el('#productModal')));
-}
-
-function setLoading(on){
-  if(on) show(el('#loading')); else hide(el('#loading'));
-}
-
-async function loadProducts(category=''){
-  try{
-    setLoading(true);
-    const params = { action: 'list', limit: 500 };
-    if(catalogState.q) params.q = catalogState.q;
-    if(category) params.category = category;
-    if(catalogState.hideOutOfStock) params.status = 'active'; // simple
-    const r = await apiGet(params);
-    if(!r || !r.ok){ renderGrid([]); return; }
-    let data = r.data || [];
-    // apply simple client-side sort
-    if(catalogState.sort === 'price_asc') data = data.sort((a,b) => Number(a.cost||0) - Number(b.cost||0));
-    if(catalogState.sort === 'price_desc') data = data.sort((a,b) => Number(b.cost||0) - Number(a.cost||0));
-    // apply hide out-of-stock client filter if needed (if quantity <= 0)
-    if(catalogState.hideOutOfStock) data = data.filter(i => Number(i.quantity || 0) > 0);
-    catalogState.items = data;
-    renderGrid(data);
-  } catch(err){
-    console.error('loadProducts', err);
-    renderGrid([]);
-  } finally {
-    setLoading(false);
+  // open modal detail (fetch get)
+  async function openDetail(sku){
+    const modal = el('detailModal');
+    const content = el('detailContent');
+    content.innerHTML = '<div class="detail-loading">กำลังโหลดรายละเอียด...</div>';
+    modal.classList.remove('hidden');
+    try{
+      setSpinner('โหลดรายละเอียด...');
+      const res = await apiGet({ action:'get', sku: sku });
+      clearSpinner();
+      if(!res.ok){ content.innerHTML = '<p>ไม่พบข้อมูล</p>'; return; }
+      const p = res.data;
+      // render detail
+      content.innerHTML = `
+        <div class="detail-grid">
+          <div class="detail-image"><img src="${p.imageUrl||'assets/placeholder.png'}" onerror="this.src='assets/placeholder.png'"></div>
+          <div class="detail-info">
+            <h2>${p.name||p.sku}</h2>
+            <p><strong>SKU:</strong> ${p.sku||''}</p>
+            <p><strong>จำนวน:</strong> ${p.quantity||0}</p>
+            <p><strong>ต้นทุน:</strong> ${p.cost||0}</p>
+            <p><strong>สถานะ:</strong> ${p.status||''}</p>
+            <p><strong>หมวดหมู่:</strong> ${p.category||''}</p>
+            <div class="detail-actions">
+              <a class="btn" href="product.html?sku=${encodeURIComponent(p.sku)}">ไปหน้ารายละเอียด</a>
+            </div>
+          </div>
+        </div>
+      `;
+    }catch(err){
+      clearSpinner();
+      content.innerHTML = `<p class="err">ข้อผิดพลาด: ${err.message}</p>`;
+      console.error(err);
+    }
   }
-}
 
-/* init */
-document.addEventListener('DOMContentLoaded', ()=>{
-  wireUI();
-  // initial load
-  loadProducts();
-});
+  function closeModal(){
+    el('detailModal').classList.add('hidden');
+  }
+
+  // load products (append)
+  async function loadProducts(opts = { reset:true }){
+    try{
+      if(opts.reset){
+        OFFSET = 0;
+        totalLoaded = 0;
+        el('catalogGrid').innerHTML = '';
+        hide(el('btnLoadMore'));
+      }
+      const q = lastQuery || '';
+      const params = { action:'list', limit: LIMIT, page: Math.floor(OFFSET / LIMIT) + 1 };
+      if(q) params.q = q;
+      if(lastFilters.status) params.status = lastFilters.status;
+      if(lastFilters.category) params.category = lastFilters.category;
+      setSpinner('กำลังโหลดสินค้า...');
+      const res = await apiGet(params);
+      clearSpinner();
+      if(!res.ok) throw new Error(res.error || 'API error');
+      const data = res.data || [];
+      if(data.length === 0 && totalLoaded === 0){
+        show(el('noResult'));
+      } else {
+        hide(el('noResult'));
+      }
+      data.forEach(p=>{
+        el('catalogGrid').appendChild(renderCard(p));
+      });
+      totalLoaded += data.length;
+      OFFSET += data.length;
+      // show more if we got a full page
+      if(data.length === LIMIT){
+        show(el('btnLoadMore'));
+      } else {
+        hide(el('btnLoadMore'));
+      }
+    }catch(err){
+      clearSpinner();
+      console.error('loadProducts error', err);
+      alert('โหลดรายการล้มเหลว: ' + err.message);
+    }
+  }
+
+  // search / filters
+  function applySearchAndFilters(){
+    const q = el('searchBox').value.trim();
+    const st = el('filterStatus').value;
+    const cat = el('filterCategory').value;
+    lastQuery = q;
+    lastFilters.status = st;
+    lastFilters.category = cat;
+    loadProducts({ reset:true });
+  }
+
+  // populate categories (from list response)
+  function populateCategoriesFrom(data){
+    const set = new Set();
+    (data||[]).forEach(p=>{ if(p.category) set.add(p.category); });
+    const sel = el('filterCategory');
+    // only add if empty (avoid duplicates)
+    if(sel && sel.options.length <= 1){
+      set.forEach(c=>{
+        const opt = document.createElement('option'); opt.value = c; opt.textContent = c; sel.appendChild(opt);
+      });
+    }
+  }
+
+  // init bindings
+  function init(){
+    // events
+    el('btnSearch').addEventListener('click', ()=> applySearchAndFilters());
+    el('btnReload').addEventListener('click', ()=> { el('searchBox').value=''; el('filterStatus').value=''; el('filterCategory').value=''; lastQuery=''; lastFilters={ status:'', category:'' }; loadProducts({ reset:true }); });
+    el('btnLoadMore').addEventListener('click', ()=> loadProducts({ reset:false }));
+    el('modalClose').addEventListener('click', closeModal);
+    el('detailModal').addEventListener('click', (e)=> { if(e.target === el('detailModal')) closeModal(); });
+    el('searchBox').addEventListener('keydown', (ev)=> { if(ev.key === 'Enter') applySearchAndFilters(); });
+
+    // preload: try to load small set to fill categories then load full grid
+    (async ()=>{
+      try{
+        setSpinner('ตรวจสอบหมวดหมู่...');
+        const res = await apiGet({ action:'list', limit: 100 }); // short fetch
+        clearSpinner();
+        if(res && res.ok){
+          populateCategoriesFrom(res.data || []);
+        }
+      }catch(e){ clearSpinner(); /* ignore */ }
+      await loadProducts({ reset:true });
+    })();
+  }
+
+  // wait for DOM
+  document.addEventListener('DOMContentLoaded', init);
+})();
