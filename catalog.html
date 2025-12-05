@@ -1,81 +1,87 @@
-<!-- catalog.html -->
 <!doctype html>
 <html lang="th">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>StockTone — Catalog</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Catalog — StockTone</title>
+
+  <!-- style -->
   <link rel="stylesheet" href="style.css">
+
+  <!-- config (ต้องมี APPS_SCRIPT_URL) -->
   <script src="config.js"></script>
+
+  <!-- catalog logic -->
+  <script defer src="catalog.js"></script>
 </head>
 <body>
   <header class="site-header">
-    <div class="wrap">
-      <a class="logo" href="index.html">StockTone</a>
-      <div class="header-right">
-        <input id="searchInput" type="search" placeholder="ค้นหาสินค้า..." aria-label="search">
-        <button id="btnSearch">ค้นหา</button>
+    <div class="container header-inner">
+      <div class="brand">
+        <img src="assets/logo-64.png" alt="StockTone" class="brand-logo" onerror="this.style.display='none'">
+        <h1 class="site-title">StockTone</h1>
       </div>
+      <nav class="header-actions">
+        <a class="btn btn-ghost" href="index.html">หน้าแรก</a>
+        <a class="btn" href="admin.html">แผงผู้ดูแล</a>
+      </nav>
     </div>
   </header>
 
-  <main class="wrap main-grid">
-    <aside class="filters">
-      <h3>หมวดหมู่</h3>
-      <div id="categories" class="categories"></div>
-      <hr>
-      <h4>ตัวกรอง</h4>
-      <label><input type="checkbox" id="hideOutOfStock"> ซ่อนสินค้าหมด</label>
-    </aside>
+  <main class="container main-content">
+    <section class="catalog-controls card">
+      <div class="row">
+        <input id="searchBox" class="input" placeholder="ค้นหาสินค้า ชื่อ หรือ SKU..." />
+        <select id="filterStatus" class="select">
+          <option value="">สถานะทั้งหมด</option>
+          <option value="active">Active</option>
+          <option value="deleted">Deleted</option>
+          <option value="ready">พร้อมส่ง</option>
+        </select>
+        <select id="filterCategory" class="select">
+          <option value="">หมวดหมู่ทั้งหมด</option>
+          <!-- categories จะเติมโดย JS ถ้ามีข้อมูล -->
+        </select>
+        <button id="btnSearch" class="btn">ค้นหา</button>
+        <button id="btnReload" class="btn btn-outline">โหลดใหม่</button>
+      </div>
+    </section>
 
-    <section class="catalog">
-      <div id="catalogTop" class="catalog-top">
-        <div id="resultCount" class="result-count"></div>
-        <div class="sort">
-          <label>เรียง: 
-            <select id="sortSelect">
-              <option value="">ล่าสุด</option>
-              <option value="price_asc">ราคาต่ำ → สูง</option>
-              <option value="price_desc">ราคาสูง → ต่ำ</option>
-            </select>
-          </label>
+    <section class="catalog-grid-wrap">
+      <div id="spinnerOverlay" class="spinner-overlay hidden">
+        <div class="spinner">
+          <div class="lds-dual-ring"></div>
+          <div class="spinner-text" id="spinnerText">กำลังโหลด...</div>
         </div>
       </div>
 
-      <div id="grid" class="product-grid" role="list">
-        <!-- cards injected here -->
+      <div id="catalogGrid" class="catalog-grid">
+        <!-- cards ถูกเติมโดย JS -->
       </div>
 
-      <div id="loading" class="loading-overlay hidden">
-        <div class="spinner"></div>
-        <div class="loading-text">กำลังโหลดสินค้า...</div>
+      <div id="noResult" class="empty-state hidden card">
+        <p>ไม่พบสินค้า</p>
+      </div>
+
+      <div class="load-more-wrap">
+        <button id="btnLoadMore" class="btn btn-outline hidden">โหลดเพิ่ม</button>
       </div>
     </section>
   </main>
 
-  <!-- Product detail modal -->
-  <div id="productModal" class="modal hidden" role="dialog" aria-modal="true">
-    <div class="modal-panel">
+  <!-- modal placeholder -->
+  <div id="detailModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-panel card">
       <button class="modal-close" id="modalClose">&times;</button>
-      <div class="modal-body">
-        <div class="modal-image" id="modalImage"></div>
-        <div class="modal-info">
-          <h2 id="modalTitle"></h2>
-          <p id="modalSku" class="meta"></p>
-          <p id="modalCategory" class="meta"></p>
-          <p id="modalPrice" class="price"></p>
-          <p id="modalQty" class="meta"></p>
-          <p id="modalDesc" class="desc"></p>
-          <div class="modal-actions">
-            <input id="modalQtyInput" type="number" min="1" value="1">
-            <button id="btnAddToCart" class="btn-primary">เพิ่มลงตะกร้า</button>
-            <a id="btnOpenProduct" class="btn-outline" href="#">ดูรายละเอียด</a>
-          </div>
-        </div>
+      <div id="detailContent">
+        <!-- เติมด้วย JS -->
+        <div class="detail-loading">กำลังโหลดรายละเอียด...</div>
       </div>
     </div>
   </div>
 
-  <script src="catalog.js"></script>
+  <footer class="site-footer">
+    <div class="container">StockTone — Catalog</div>
+  </footer>
 </body>
 </html>
