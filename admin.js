@@ -1,37 +1,66 @@
 /* admin.js - StockTone Admin Panel (Full)
-   - In-place update (skuNew)
-   - Edit modal combines edit / in / out / delete (hard/soft)
-   - Add modal for creating new product
-   - Uses APPS_SCRIPT_URL from config.js
+   - ใช้ APPS_SCRIPT_URL จาก config.js
+   - ใช้ spinner DOM element ที่สร้างโดย JS แต่ CSS อยู่ใน style.css
 */
 
-/* Utilities (minimal comments) */
-function esc(s){ return String(s==null?'':s); } // escaping done by not injecting raw HTML besides safe img src
+/* --- Utilities --- */
+function esc(s){ return String(s==null?'':s); }
 function showMsg(id, msg, isErr){
-  const el=document.getElementById(id);
+  const el = document.getElementById(id);
   if(!el) return;
-  el.textContent = msg||'';
-  el.style.color = isErr? 'red':'green';
+  el.textContent = msg || '';
+  el.style.color = isErr ? 'red' : 'green';
 }
 
-/* Session helpers */
+/* --- session helpers --- */
 function saveSession(adminId, adminPassword){ sessionStorage.setItem('adminId', adminId); sessionStorage.setItem('adminPassword', adminPassword); }
 function clearSession(){ sessionStorage.removeItem('adminId'); sessionStorage.removeItem('adminPassword'); }
 function getSession(){ return { adminId: sessionStorage.getItem('adminId')||'', adminPassword: sessionStorage.getItem('adminPassword')||'' }; }
 
-/* API helpers */
+/* --- API helpers --- */
 async function apiGet(params){
   const url = APPS_SCRIPT_URL + '?' + new URLSearchParams(params).toString();
-  const r = await fetch(url, { cache:'no-store' });
+  const r = await fetch(url);
   return r.json();
 }
 async function apiPost(paramsObj){
-  const r = await fetch(APPS_SCRIPT_URL, { method:'POST', body: new URLSearchParams(paramsObj) });
+  const r = await fetch(APPS_SCRIPT_URL, { method:'POST', body:new URLSearchParams(paramsObj) });
   const text = await r.text();
-  try{ return JSON.parse(text); }catch(e){ throw new Error('Invalid JSON from API: '+text); }
+  try{ return JSON.parse(text); } catch(e){ throw new Error('Invalid JSON from API: '+text); }
 }
 
-/* image upload (base64 via URLSearchParams) */
+/* --- spinner DOM (CSS in style.css) --- */
+function ensureSpinner(){
+  if(document.getElementById('globalSpinnerOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'globalSpinnerOverlay';
+  overlay.innerHTML = `
+    <div id="globalSpinnerBox">
+      <div class="spinner" aria-hidden="true"></div>
+      <div id="spinnerTextCol">
+        <div id="spinnerTitle">กำลังทำงาน...</div>
+        <div id="spinnerSub">โปรดรอสักครู่</div>
+        <div id="spinnerProgress"><div class="bar"></div></div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+function showSpinner(title, sub){
+  ensureSpinner();
+  const overlay = document.getElementById('globalSpinnerOverlay');
+  if(!overlay) return;
+  if(title) (overlay.querySelector('#spinnerTitle')||{textContent:''}).textContent = title;
+  if(sub) (overlay.querySelector('#spinnerSub')||{textContent:''}).textContent = sub;
+  overlay.classList.add('visible');
+}
+function hideSpinner(){
+  const overlay = document.getElementById('globalSpinnerOverlay');
+  if(!overlay) return;
+  overlay.classList.remove('visible');
+}
+
+/* --- image upload (base64) --- */
 async function uploadImage(file, sku){
   if(!file) throw new Error('no file');
   const s = getSession();
@@ -61,28 +90,32 @@ function initLoginUI(){
   const who = document.getElementById('who');
   const loginSection = document.getElementById('loginSection');
   const adminArea = document.getElementById('adminArea');
+
   function updateState(){
     const s = getSession();
     if(s.adminId && s.adminPassword){
-      loginSection.style.display='none';
-      adminArea.style.display='block';
-      who.textContent = esc(s.adminId);
+      if(loginSection) loginSection.style.display='none';
+      if(adminArea) adminArea.style.display='block';
+      if(who) who.textContent = esc(s.adminId);
     } else {
-      loginSection.style.display='block';
-      adminArea.style.display='none';
-      who.textContent='';
+      if(loginSection) loginSection.style.display='block';
+      if(adminArea) adminArea.style.display='none';
+      if(who) who.textContent = '';
     }
   }
+
   if(loginBtn) loginBtn.addEventListener('click', ()=>{
-    const id = document.getElementById('adminId').value.trim();
-    const pw = document.getElementById('adminPassword').value.trim();
-    if(!id||!pw) { showMsg('loginMsg','กรุณากรอก Admin ID และ Password', true); return; }
-    saveSession(id,pw);
+    const id = (document.getElementById('adminId')||{}).value || '';
+    const pw = (document.getElementById('adminPassword')||{}).value || '';
+    if(!id || !pw){ showMsg('loginMsg','กรุณากรอก Admin ID และ Password', true); return;}
+    saveSession(id.trim(), pw.trim());
     updateState();
     loadProducts();
     showMsg('loginMsg','เข้าสู่ระบบแล้ว', false);
   });
+
   if(logoutBtn) logoutBtn.addEventListener('click', ()=>{ clearSession(); updateState(); });
+
   updateState();
 }
 
@@ -92,236 +125,239 @@ async function loadProducts(q){
   if(tbody) tbody.innerHTML = '';
   showMsg('listMsg','กำลังโหลด...', false);
   try{
+    showSpinner('กำลังโหลดรายการ', 'เชื่อมต่อกับ Google Sheets...');
     const params = { action:'list', limit:500 };
     if(q) params.q = q;
     const res = await apiGet(params);
-    if(!res.ok) { showMsg('listMsg','โหลดรายการล้มเหลว', true); return; }
+    hideSpinner();
+    if(!res.ok){ showMsg('listMsg','โหลดรายการล้มเหลว', true); return; }
     const data = res.data || [];
     if(!tbody){ showMsg('listMsg','ไม่มีตาราง DOM', true); return; }
     data.forEach(p=>{
       const tr = document.createElement('tr');
+
       const imgTd = document.createElement('td');
       imgTd.style.width = '90px';
       if(p.imageUrl){
         const img = document.createElement('img');
         img.src = p.imageUrl;
-        img.style.width='70px';
-        img.style.height='70px';
-        img.style.objectFit='cover';
-        img.style.borderRadius='6px';
+        img.style.width = '70px';
+        img.style.height = '70px';
+        img.style.objectFit = 'cover';
         imgTd.appendChild(img);
       }
-      const skuTd = document.createElement('td'); skuTd.textContent = p.sku || '';
-      const nameTd = document.createElement('td'); nameTd.textContent = p.name || '';
-      const qtyTd = document.createElement('td'); qtyTd.textContent = p.quantity || 0;
-      const costTd = document.createElement('td'); costTd.textContent = p.cost || 0;
-      const statusTd = document.createElement('td'); statusTd.textContent = p.status || '';
+
+      const skuTd = document.createElement('td'); skuTd.textContent = p.sku;
+      const nameTd = document.createElement('td'); nameTd.textContent = p.name;
+      const qtyTd = document.createElement('td'); qtyTd.textContent = p.quantity;
+      const costTd = document.createElement('td'); costTd.textContent = p.cost;
+      const statusTd = document.createElement('td'); statusTd.textContent = p.status;
+
       const actionTd = document.createElement('td');
-      const btnEdit = document.createElement('button'); btnEdit.textContent='แก้ไข'; btnEdit.className='btn-edit';
+      const btnEdit = document.createElement('button');
+      btnEdit.textContent = 'แก้ไข';
+      btnEdit.className = 'btn-edit';
       btnEdit.dataset.sku = p.sku;
+      btnEdit.style.marginRight = '8px';
       actionTd.appendChild(btnEdit);
-      tr.appendChild(imgTd); tr.appendChild(skuTd); tr.appendChild(nameTd); tr.appendChild(qtyTd); tr.appendChild(costTd); tr.appendChild(statusTd); tr.appendChild(actionTd);
+
+      tr.appendChild(imgTd);
+      tr.appendChild(skuTd);
+      tr.appendChild(nameTd);
+      tr.appendChild(qtyTd);
+      tr.appendChild(costTd);
+      tr.appendChild(statusTd);
+      tr.appendChild(actionTd);
+
       tbody.appendChild(tr);
     });
+
     attachRowEvents();
     showMsg('listMsg','โหลดสำเร็จ', false);
-  }catch(err){ console.error(err); showMsg('listMsg','ข้อผิดพลาด: '+err.message, true); }
+  }catch(err){
+    hideSpinner();
+    console.error(err);
+    showMsg('listMsg','ข้อผิดพลาด: '+err.message, true);
+  }
 }
 function attachRowEvents(){
-  document.querySelectorAll('.btn-edit').forEach(b=> b.onclick = async (e)=> {
+  document.querySelectorAll('.btn-edit').forEach(b=> b.onclick = async (e)=>{
     const sku = e.target.dataset.sku;
-    const res = await apiGet({ action:'get', sku: sku });
-    if(!res.ok) return alert('ไม่พบสินค้า');
-    openEditModal(res.data);
+    try{
+      showSpinner('เปิดข้อมูลสินค้า', 'กำลังดึงข้อมูลจาก API...');
+      const res = await apiGet({ action:'get', sku: sku });
+      hideSpinner();
+      if(!res.ok) return alert('ไม่พบสินค้า');
+      openEditModal(res.data);
+    }catch(err){
+      hideSpinner();
+      alert('ข้อผิดพลาด: '+err.message);
+    }
   });
 }
 
 /* --- Add modal --- */
 function createAddModal(){
   if(document.getElementById('addModal')) return document.getElementById('addModal');
-  const wrap = document.createElement('div'); wrap.id='addModal';
-  wrap.style = 'position:fixed;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);z-index:9999;visibility:hidden';
+  const wrap = document.createElement('div');
+  wrap.id = 'addModal';
+  wrap.className = 'modal-overlay';
   wrap.innerHTML = `
-    <div style="width:460px;background:#fff;padding:18px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.12);">
-      <h3 style="margin-top:0">เพิ่มสินค้าใหม่</h3>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <label style="font-size:13px">SKU<input id="add_sku" style="width:100%"></label>
-        <label style="font-size:13px">หมวดหมู่<input id="add_category" style="width:100%"></label>
-        <label style="grid-column:1 / 3;font-size:13px">ชื่อ<input id="add_name" style="width:100%"></label>
-        <label style="font-size:13px">จำนวน<input id="add_quantity" type="number" value="0" min="0" style="width:100%"></label>
-        <label style="font-size:13px">ต้นทุน<input id="add_cost" type="number" value="0" min="0" style="width:100%"></label>
-        <label style="grid-column:1 / 3;font-size:13px">สถานะ<input id="add_status" value="active" style="width:100%"></label>
-        <label style="grid-column:1 / 3;font-size:13px">รูป<input id="add_file" type="file" accept="image/*"></label>
+    <div class="modal">
+      <h3>เพิ่มสินค้าใหม่</h3>
+      <div class="grid-2">
+        <label>SKU<input id="add_sku"></label>
+        <label>หมวดหมู่<input id="add_category"></label>
+        <label style="grid-column:1 / 3">ชื่อ<input id="add_name"></label>
+        <label>จำนวน<input id="add_quantity" type="number" value="0" min="0"></label>
+        <label>ต้นทุน<input id="add_cost" type="number" value="0" min="0"></label>
+        <label style="grid-column:1 / 3">สถานะ<input id="add_status" value="active"></label>
+        <label style="grid-column:1 / 3">รูป<input id="add_file" type="file" accept="image/*"></label>
       </div>
       <div style="text-align:right;margin-top:12px;">
-        <button id="addCancel" style="margin-right:8px;padding:8px 12px;border-radius:6px;border:1px solid #ccc;background:#fff;">ยกเลิก</button>
-        <button id="addSave" style="padding:8px 14px;border-radius:6px;background:#2b7cff;color:#fff;border:0;">เพิ่มสินค้า</button>
+        <button id="addCancel" class="secondary">ยกเลิก</button>
+        <button id="addSave">เพิ่มสินค้า</button>
       </div>
-      <div id="addMsg" style="margin-top:8px;font-size:13px"></div>
-    </div>`;
+      <div id="addMsg" class="msg"></div>
+    </div>
+  `;
   document.body.appendChild(wrap);
 
-  // Handlers
-  wrap.querySelector('#addCancel').addEventListener('click', ()=>{
-    clearAddForm();
-    wrap.style.visibility='hidden';
+  const cancelBtn = wrap.querySelector('#addCancel');
+  const saveBtn = wrap.querySelector('#addSave');
+
+  cancelBtn.addEventListener('click', ()=>{
+    wrap.style.visibility = 'hidden';
+    // clear fields so next open is fresh
+    clearAddFields();
+    showMsg('addMsg','', false);
   });
-  wrap.querySelector('#addSave').addEventListener('click', performAddProduct);
+
+  saveBtn.addEventListener('click', performAddProduct);
+  // ensure clicking background closes modal
+  wrap.addEventListener('click', (ev)=>{ if(ev.target === wrap){ wrap.style.visibility='hidden'; clearAddFields(); } });
+
   return wrap;
 }
-function openAddModal(){
-  const wrap = createAddModal();
-  // clear previous values when opening
-  document.getElementById('add_sku').value = '';
-  document.getElementById('add_category').value = '';
-  document.getElementById('add_name').value = '';
-  document.getElementById('add_quantity').value = 0;
-  document.getElementById('add_cost').value = 0;
-  document.getElementById('add_status').value = 'active';
-  document.getElementById('add_file').value = '';
-  showMsg('addMsg','',false);
-  wrap.style.visibility = 'visible';
-}
-function clearAddForm(){
-  const wrap = document.getElementById('addModal');
-  if(!wrap) return;
-  document.getElementById('add_sku').value = '';
-  document.getElementById('add_category').value = '';
-  document.getElementById('add_name').value = '';
-  document.getElementById('add_quantity').value = 0;
-  document.getElementById('add_cost').value = 0;
-  document.getElementById('add_status').value = 'active';
-  document.getElementById('add_file').value = '';
-  showMsg('addMsg','',false);
+function openAddModal(){ createAddModal().style.visibility = 'visible'; }
+function clearAddFields(){
+  const ids = ['add_sku','add_category','add_name','add_quantity','add_cost','add_status','add_file'];
+  ids.forEach(id=>{ const el = document.getElementById(id); if(!el) return; if(el.type === 'file') el.value = ''; else if(el.type === 'number') el.value = 0; else el.value = (id==='add_status'?'active':''); });
+  const msg = document.getElementById('addMsg'); if(msg) msg.textContent = '';
 }
 
 async function performAddProduct(){
-  const saveBtn = document.getElementById('addSave');
-  const cancelBtn = document.getElementById('addCancel');
-  const sku = document.getElementById('add_sku').value.trim();
+  const sku = (document.getElementById('add_sku')||{}).value.trim();
   if(!sku){ showMsg('addMsg','SKU ต้องไม่ว่าง', true); return; }
-  const name = document.getElementById('add_name').value || '';
-  const quantity = Number(document.getElementById('add_quantity').value||0);
-  const cost = Number(document.getElementById('add_cost').value||0);
-  const status = document.getElementById('add_status').value || '';
-  const category = document.getElementById('add_category').value || '';
-  const file = document.getElementById('add_file').files[0];
+  const name = (document.getElementById('add_name')||{}).value || '';
+  const quantity = Number((document.getElementById('add_quantity')||{}).value || 0);
+  const cost = Number((document.getElementById('add_cost')||{}).value || 0);
+  const status = (document.getElementById('add_status')||{}).value || '';
+  const category = (document.getElementById('add_category')||{}).value || '';
+  const file = (document.getElementById('add_file')||{}).files && document.getElementById('add_file').files[0];
 
-  // UX: disable save, show spinner/text
-  saveBtn.disabled = true;
-  cancelBtn.disabled = true;
-  const prevText = saveBtn.textContent;
-  saveBtn.textContent = 'กำลังบันทึก...';
   showMsg('addMsg','กำลังบันทึก...', false);
-
+  showSpinner('เพิ่มสินค้า', 'กำลังอัปโหลดข้อมูล/รูป โปรดรอสักครู่...');
   try{
     let imageUrl = '';
     if(file){
       const up = await uploadImage(file, sku);
-      if(!up.ok) throw new Error('Upload failed: '+ (up.error||'unknown'));
+      if(!up.ok) throw new Error('Upload failed: '+(up.error||'unknown'));
       imageUrl = up.imageUrl;
     }
     const s = getSession();
-    const params = {
-      action:'add',
-      adminId:s.adminId,
-      adminPassword:s.adminPassword,
-      sku:sku,
-      name:name,
-      quantity:quantity,
-      cost:cost,
-      status:status,
-      imageUrl:imageUrl,
-      category:category
-    };
+    const params = { action:'add', adminId:s.adminId, adminPassword:s.adminPassword, sku:sku, name:name, quantity:quantity, cost:cost, status:status, imageUrl:imageUrl, category:category };
     const res = await apiPost(params);
+    hideSpinner();
     if(res.ok){
       showMsg('addMsg','เพิ่มเรียบร้อย', false);
-      // close modal, clear form, reload list
-      const wrap = document.getElementById('addModal');
-      setTimeout(()=>{ if(wrap) wrap.style.visibility='hidden'; clearAddForm(); loadProducts(); }, 400);
+      const wrap = createAddModal();
+      wrap.style.visibility = 'hidden';
+      clearAddFields();
+      // reload products and indicate success quickly
+      await loadProducts();
     } else {
       showMsg('addMsg','ผิดพลาด: '+(res.error||'unknown'), true);
     }
   }catch(err){
+    hideSpinner();
     console.error(err);
     showMsg('addMsg','ผิดพลาด: '+err.message, true);
-  } finally {
-    saveBtn.disabled = false;
-    cancelBtn.disabled = false;
-    saveBtn.textContent = prevText;
   }
 }
 
 /* --- Edit modal (รวมการจัดการทั้งหมด) --- */
 function createEditModal(){
   if(document.getElementById('editModal')) return document.getElementById('editModal');
-  const wrap = document.createElement('div'); wrap.id='editModal';
-  wrap.style = 'position:fixed;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);z-index:10000;visibility:hidden';
+  const wrap = document.createElement('div');
+  wrap.id = 'editModal';
+  wrap.className = 'modal-overlay';
   wrap.innerHTML = `
-  <div style="width:560px;background:#fff;padding:16px;border-radius:8px;box-shadow:0 8px 30px rgba(0,0,0,0.12);">
-    <h3 id="editTitle" style="margin-top:0">แก้ไขสินค้า</h3>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-      <label style="font-size:13px">SKU<input id="edit_sku" style="width:100%"></label>
-      <label style="font-size:13px">หมวดหมู่<input id="edit_category" style="width:100%"></label>
-      <label style="grid-column:1 / 3;font-size:13px">ชื่อ<input id="edit_name" style="width:100%"></label>
-      <label style="font-size:13px">จำนวน<input id="edit_quantity" type="number" min="0" style="width:100%"></label>
-      <label style="font-size:13px">ต้นทุน<input id="edit_cost" type="number" min="0" style="width:100%"></label>
-      <label style="grid-column:1 / 3;font-size:13px">สถานะ<input id="edit_status" style="width:100%"></label>
-      <div id="edit_preview" style="grid-column:1 / 3"></div>
-      <label style="grid-column:1 / 3;font-size:13px">อัปโหลดรูปใหม่<input id="edit_file" type="file" accept="image/*"></label>
-    </div>
-    <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;">
-      <div>
-        <button id="btnIn" style="margin-right:8px;padding:8px 10px;border-radius:6px;">รับเข้า</button>
-        <button id="btnOut" style="padding:8px 10px;border-radius:6px;">ตัดออก</button>
+    <div class="modal">
+      <h3 id="editTitle">แก้ไขสินค้า</h3>
+      <div class="grid-2">
+        <label>SKU<input id="edit_sku"></label>
+        <label>หมวดหมู่<input id="edit_category"></label>
+        <label style="grid-column:1 / 3">ชื่อ<input id="edit_name"></label>
+        <label>จำนวน<input id="edit_quantity" type="number" min="0"></label>
+        <label>ต้นทุน<input id="edit_cost" type="number" min="0"></label>
+        <label style="grid-column:1 / 3">สถานะ<input id="edit_status"></label>
+        <div id="edit_preview" style="grid-column:1 / 3"></div>
+        <label style="grid-column:1 / 3">อัปโหลดรูปใหม่<input id="edit_file" type="file" accept="image/*"></label>
       </div>
-      <div>
-        <label style="margin-right:8px"><input id="softDelete" type="checkbox"> Soft delete</label>
-        <button id="btnDelete" style="margin-right:8px;padding:8px 10px;background:#f44336;color:#fff;border:0;border-radius:6px;">ลบ</button>
-        <button id="editCancel" style="margin-right:8px;padding:8px 10px;border-radius:6px;">ยกเลิก</button>
-        <button id="editSave" style="padding:8px 12px;background:#2b7cff;color:#fff;border:0;border-radius:6px;">บันทึก</button>
+      <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <button id="btnIn" class="secondary">รับเข้า</button>
+          <button id="btnOut" class="secondary">ตัดออก</button>
+        </div>
+        <div>
+          <label style="margin-right:8px"><input id="softDelete" type="checkbox"> Soft delete</label>
+          <button id="btnDelete" class="danger">ลบ</button>
+          <button id="editCancel" class="secondary">ยกเลิก</button>
+          <button id="editSave">บันทึก</button>
+        </div>
       </div>
+      <div id="editMsg" class="msg"></div>
     </div>
-    <div id="editMsg" style="margin-top:8px;font-size:13px"></div>
-  </div>`;
+  `;
   document.body.appendChild(wrap);
 
-  wrap.querySelector('#editCancel').addEventListener('click', ()=> wrap.style.visibility='hidden');
-  wrap.querySelector('#editSave').addEventListener('click', async ()=> {
+  wrap.querySelector('#editCancel').addEventListener('click', ()=> { wrap.style.visibility='hidden'; });
+  wrap.querySelector('#editSave').addEventListener('click', async ()=>{
     const originalSku = wrap.dataset.originalSku;
     await saveEdit(originalSku);
   });
   wrap.querySelector('#btnIn').addEventListener('click', ()=> openInOutFromEdit('in'));
   wrap.querySelector('#btnOut').addEventListener('click', ()=> openInOutFromEdit('out'));
 
-  // Delete handler with UI feedback
+  // Delete handler improved with spinner & disable
   wrap.querySelector('#btnDelete').addEventListener('click', async ()=>{
     if(!confirm('ยืนยันการลบสินค้านี้?')) return;
     const btn = wrap.querySelector('#btnDelete');
     const soft = document.getElementById('softDelete').checked;
-    const sku = document.getElementById('edit_sku').value.trim();
+    const sku = (document.getElementById('edit_sku')||{}).value.trim();
     const s = getSession();
     if(!s.adminId || !s.adminPassword){ alert('session หมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง'); return; }
 
-    // disable UI
     btn.disabled = true;
     const prevText = btn.textContent;
     btn.textContent = 'กำลังลบ...';
+    showSpinner('ลบสินค้า', 'กำลังประมวลผล...');
 
     try{
       const params = { action:'delete', adminId:s.adminId, adminPassword:s.adminPassword, sku: sku };
       if(!soft) params.hard = 'true';
       const res = await apiPost(params);
+      hideSpinner();
       if(res && res.ok){
         alert('ลบเรียบร้อย');
-        createEditModal().style.visibility = 'hidden';
-        await loadProducts(); // รีโหลดรายการหลังลบ
+        wrap.style.visibility = 'hidden';
+        await loadProducts();
       } else {
-        console.warn('Delete response:', res);
         alert('ลบไม่สำเร็จ: ' + (res && res.error ? res.error : 'Unknown error'));
       }
-    } catch(err){
+    }catch(err){
+      hideSpinner();
       console.error('Delete error:', err);
       alert('ข้อผิดพลาดในการลบ: ' + (err && err.message ? err.message : err));
     } finally {
@@ -330,14 +366,18 @@ function createEditModal(){
     }
   });
 
+  // background click closes modal
+  wrap.addEventListener('click', (ev)=>{ if(ev.target === wrap) wrap.style.visibility='hidden'; });
+
   return wrap;
 }
+
 function openEditModal(product){
   const modal = createEditModal();
-  modal.style.visibility='visible';
+  modal.style.visibility = 'visible';
   modal.dataset.originalSku = product.sku;
   document.getElementById('editTitle').textContent = 'แก้ไข — ' + product.sku;
-  document.getElementById('edit_sku').value = product.sku || '';
+  document.getElementById('edit_sku').value = product.sku;
   document.getElementById('edit_name').value = product.name || '';
   document.getElementById('edit_quantity').value = Number(product.quantity)||0;
   document.getElementById('edit_cost').value = Number(product.cost)||0;
@@ -347,35 +387,27 @@ function openEditModal(product){
   const prev = document.getElementById('edit_preview'); prev.innerHTML = '';
   if(product.imageUrl){
     const img = document.createElement('img');
-    img.src=product.imageUrl;
-    img.style.width='90px';
-    img.style.height='90px';
-    img.style.objectFit='cover';
-    img.style.borderRadius='6px';
+    img.src = product.imageUrl;
+    img.style.width = '90px';
+    img.style.height = '90px';
+    img.style.objectFit = 'cover';
     prev.appendChild(img);
   } else prev.textContent = 'ไม่มีรูป';
   document.getElementById('editMsg').textContent = '';
 }
 
-/* Save edit: in-place update using skuNew if SKU changed */
+/* Save edit (in-place update, backend needs to support skuNew rename) */
 async function saveEdit(originalSku){
-  const newSku = document.getElementById('edit_sku').value.trim();
-  const name = document.getElementById('edit_name').value || '';
-  const quantity = Number(document.getElementById('edit_quantity').value || 0);
-  const cost = Number(document.getElementById('edit_cost').value || 0);
-  const status = document.getElementById('edit_status').value || '';
-  const category = document.getElementById('edit_category').value || '';
-  const file = document.getElementById('edit_file').files[0];
-  const msgEl = document.getElementById('editMsg'); msgEl.style.color='black'; msgEl.textContent='กำลังบันทึก...';
-
-  // disable save while saving
-  const saveBtn = document.getElementById('editSave');
-  const cancelBtn = document.getElementById('editCancel');
-  saveBtn.disabled = true;
-  cancelBtn.disabled = true;
-  const prevText = saveBtn.textContent;
-  saveBtn.textContent = 'กำลังบันทึก...';
-
+  const newSku = (document.getElementById('edit_sku')||{}).value.trim();
+  const name = (document.getElementById('edit_name')||{}).value || '';
+  const quantity = Number((document.getElementById('edit_quantity')||{}).value || 0);
+  const cost = Number((document.getElementById('edit_cost')||{}).value || 0);
+  const status = (document.getElementById('edit_status')||{}).value || '';
+  const category = (document.getElementById('edit_category')||{}).value || '';
+  const file = (document.getElementById('edit_file')||{}).files && document.getElementById('edit_file').files[0];
+  const msgEl = document.getElementById('editMsg');
+  msgEl.style.color='black'; msgEl.textContent='กำลังบันทึก...';
+  showSpinner('บันทึกการแก้ไข', 'กำลังอัปเดตข้อมูล โปรดรอสักครู่...');
   try{
     let imageUrl;
     if(file){
@@ -386,36 +418,37 @@ async function saveEdit(originalSku){
     const s = getSession();
     const params = { action:'update', adminId:s.adminId, adminPassword:s.adminPassword, sku: originalSku, name: name, quantity: quantity, cost: cost, status: status, category: category };
     if(imageUrl) params.imageUrl = imageUrl;
-    if(newSku && newSku !== originalSku) params.skuNew = newSku; // backend should rename in-place
+    if(newSku && newSku !== originalSku) params.skuNew = newSku;
     const res = await apiPost(params);
+    hideSpinner();
     if(res && res.ok){
-      msgEl.style.color='green';
-      msgEl.textContent='บันทึกสำเร็จ';
-      setTimeout(()=>{ createEditModal().style.visibility='hidden'; loadProducts(); }, 500);
+      msgEl.style.color='green'; msgEl.textContent='บันทึกสำเร็จ';
+      setTimeout(()=>{ createEditModal().style.visibility='hidden'; loadProducts(); }, 450);
     } else {
-      msgEl.style.color='red';
-      msgEl.textContent = 'ผิดพลาด: ' + (res && res.error);
+      msgEl.style.color='red'; msgEl.textContent='ผิดพลาด: ' + (res && res.error);
     }
   }catch(err){
+    hideSpinner();
     console.error(err);
     msgEl.style.color='red';
-    msgEl.textContent = 'ผิดพลาด: '+err.message;
-  } finally {
-    saveBtn.disabled = false;
-    cancelBtn.disabled = false;
-    saveBtn.textContent = prevText;
+    msgEl.textContent = 'ผิดพลาด: ' + (err && err.message ? err.message : err);
   }
 }
 
-/* --- In/Out flow invoked from Edit modal --- */
+/* In/Out */
 function openInOutFromEdit(type){
-  const sku = document.getElementById('edit_sku').value.trim();
+  const sku = (document.getElementById('edit_sku')||{}).value.trim();
   const qty = prompt((type==='in' ? 'จำนวนที่รับเข้า:' : 'จำนวนที่ตัดออก:'), '1');
   if(qty === null) return;
   const qnum = Number(qty);
   if(!qnum || qnum <= 0){ alert('กรุณากรอกจำนวนเป็นตัวเลขมากกว่า 0'); return; }
   const note = prompt('หมายเหตุ (optional):','') || '';
-  performInOut(sku, type, qnum, note).then(r=>{ alert('บันทึกเรียบร้อย'); loadProducts(); }).catch(e=> alert('ผิดพลาด: '+e.message));
+  showSpinner(type === 'in' ? 'บันทึกรับเข้า' : 'บันทึกตัดออก', 'กำลังบันทึกข้อมูล...');
+  performInOut(sku, type, qnum, note).then(r=>{
+    hideSpinner();
+    alert('บันทึกเรียบร้อย');
+    loadProducts();
+  }).catch(e=>{ hideSpinner(); alert('ผิดพลาด: '+e.message); });
 }
 async function performInOut(sku, type, qty, note){
   const s = getSession();
@@ -425,30 +458,33 @@ async function performInOut(sku, type, qty, note){
   return res;
 }
 
-/* --- Init UI bindings --- */
+/* --- Init UI --- */
 function initAdmin(){
   initLoginUI();
-  // Add button (if exists) -> open add modal
+
   const openAddBtn = document.getElementById('openAddBtn');
   if(openAddBtn) openAddBtn.addEventListener('click', openAddModal);
 
-  // Back-compat: if add form exists id=addForm then hide it and create button
   const addForm = document.getElementById('addForm');
   if(addForm){
     addForm.style.display='none';
-    // create a small add button above it if not exists
     if(!document.getElementById('openAddBtn')){
-      const btn = document.createElement('button'); btn.id='openAddBtn'; btn.textContent='เพิ่มสินค้า';
-      btn.style.marginBottom = '10px';
+      const btn = document.createElement('button');
+      btn.id='openAddBtn';
+      btn.textContent='เพิ่มสินค้า';
       addForm.parentNode.insertBefore(btn, addForm);
       btn.addEventListener('click', openAddModal);
     }
   }
-  // search and refresh
+
   const searchBox = document.getElementById('searchBox');
   if(document.getElementById('refreshList')) document.getElementById('refreshList').addEventListener('click', ()=> loadProducts(searchBox && searchBox.value || ''));
   if(searchBox) searchBox.addEventListener('keydown', (ev)=> { if(ev.key === 'Enter') loadProducts(searchBox.value); });
-  // load products initially if session exists
+
+  // ensure spinner exists
+  ensureSpinner();
+
+  // load if session present
   if(getSession().adminId) loadProducts();
 }
 document.addEventListener('DOMContentLoaded', initAdmin);
