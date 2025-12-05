@@ -1,28 +1,37 @@
-/*
- admin.js - StockTone Admin Panel (Full) with In/Out modal
- Assumes: admin.html structure + config.js (APPS_SCRIPT_URL)
-*/
+/* admin.js - StockTone Admin Panel (Full) with Edit modal (image/sku/name/cost/status/category) */
 
-// ---------- Utilities ----------
-function esc(s){ return String(s==null?'':s).replace(/[&<>"'`=\\/]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;','=':'&#61;','/':'&#47;','\\':'\\\\'}[c]; }); }
-function showMsg(id, msg, isError){ const el = document.getElementById(id); if(!el) return; el.textContent = msg||''; el.style.color = isError ? 'red' : 'green'; }
+/* -------- Utilities -------- */
+function esc(s){ return String(s==null?'':s).replace(/[&<>"'`=\\/]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;','=':'&#61;','/':'&#47;','\\':'\\\\'}[c])); }
+function showMsg(id, msg, isError){ const el=document.getElementById(id); if(!el) return; el.textContent=msg||''; el.style.color=isError? 'red':'green'; }
 
-// ---------- Config / Session ----------
+/* -------- Config / Session -------- */
 if(typeof APPS_SCRIPT_URL === 'undefined') console.warn('APPS_SCRIPT_URL not defined - set config.js');
 function saveSession(adminId, adminPassword){ sessionStorage.setItem('adminId', adminId); sessionStorage.setItem('adminPassword', adminPassword); }
 function clearSession(){ sessionStorage.removeItem('adminId'); sessionStorage.removeItem('adminPassword'); }
 function getSession(){ return { adminId: sessionStorage.getItem('adminId')||'', adminPassword: sessionStorage.getItem('adminPassword')||'' }; }
 
-// ---------- Upload helper ----------
+/* -------- API helpers -------- */
+async function apiGet(params){
+  const url = APPS_SCRIPT_URL + '?' + new URLSearchParams(params).toString();
+  const r = await fetch(url);
+  return r.json();
+}
+async function apiPost(paramsObj){
+  const r = await fetch(APPS_SCRIPT_URL, { method:'POST', body: new URLSearchParams(paramsObj) });
+  return r.json();
+}
+
+/* -------- Upload helper (base64 via URLSearchParams) -------- */
 async function uploadImage(file, opts = {}){
   if(!file) throw new Error('No file provided');
-  const adminId = opts.adminId || getSession().adminId || '';
-  const adminPassword = opts.adminPassword || getSession().adminPassword || '';
+  const s = getSession();
+  const adminId = opts.adminId || s.adminId;
+  const adminPassword = opts.adminPassword || s.adminPassword;
   const sku = opts.sku || '';
-  const base64 = await new Promise((resolve, reject) => {
+  const base64 = await new Promise((res, rej)=>{
     const fr = new FileReader();
-    fr.onload = () => resolve(fr.result.split(',')[1]);
-    fr.onerror = reject;
+    fr.onload = ()=> res(fr.result.split(',')[1]);
+    fr.onerror = rej;
     fr.readAsDataURL(file);
   });
   const params = new URLSearchParams();
@@ -33,16 +42,12 @@ async function uploadImage(file, opts = {}){
   params.append('contentType', file.type || 'image/png');
   params.append('base64', base64);
   if(sku) params.append('sku', sku);
-  const resp = await fetch(APPS_SCRIPT_URL + '?action=upload_image', { method: 'POST', body: params });
+  const resp = await fetch(APPS_SCRIPT_URL + '?action=upload_image', { method:'POST', body: params });
   const text = await resp.text();
-  try { return JSON.parse(text); } catch(e){ throw new Error('Invalid response: ' + text); }
+  try { return JSON.parse(text); } catch(e){ throw new Error('Invalid response from upload: ' + text); }
 }
 
-// ---------- API helpers ----------
-async function apiGet(params){ const url = APPS_SCRIPT_URL + '?' + new URLSearchParams(params).toString(); const r = await fetch(url); return r.json(); }
-async function apiPost(paramsObj){ const url = APPS_SCRIPT_URL + '?' + (paramsObj.action ? 'action=' + encodeURIComponent(paramsObj.action) : ''); const r = await fetch(url, { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'}, body: new URLSearchParams(paramsObj) }); return r.json(); }
-
-// ---------- UI: Login / Logout ----------
+/* -------- UI: Login / Logout -------- */
 function initLoginUI(){
   const loginBtn = document.getElementById('loginBtn');
   const logoutBtn = document.getElementById('logoutBtn');
@@ -64,11 +69,11 @@ function initLoginUI(){
     await loadProducts();
     showMsg('loginMsg','เข้าสู่ระบบเรียบร้อย', false);
   });
-  logoutBtn.addEventListener('click', ()=>{ clearSession(); updateState(); });
+  logoutBtn && logoutBtn.addEventListener('click', ()=>{ clearSession(); updateState(); });
   updateState();
 }
 
-// ---------- UI: Products list ----------
+/* -------- Products list & events -------- */
 async function loadProducts(q){
   const tbody = document.querySelector('#productTable tbody');
   tbody.innerHTML = '';
@@ -84,19 +89,18 @@ async function loadProducts(q){
       const tr = document.createElement('tr');
       const imgUrl = p.imageUrl ? esc(p.imageUrl) : '';
       tr.innerHTML = `
-        <td>${imgUrl ? '<img src="'+imgUrl+'" style="width:80px;height:80px;object-fit:contain"/>':''}</td>
+        <td>${imgUrl ? '<img src="'+imgUrl+'" style="width:70px;height:70px;object-fit:cover;border-radius:6px"/>':''}</td>
         <td>${esc(p.sku)}</td>
         <td>${esc(p.name)}</td>
         <td>${esc(p.quantity)}</td>
         <td>${esc(p.cost)}</td>
         <td>${esc(p.status)}</td>
-        <td>
+        <td class="table-action">
           <button class="btn-edit" data-sku="${esc(p.sku)}">แก้ไข</button>
           <button class="btn-in" data-sku="${esc(p.sku)}">รับเข้า</button>
           <button class="btn-out" data-sku="${esc(p.sku)}">ตัดออก</button>
           <button class="btn-delete" data-sku="${esc(p.sku)}">ลบ</button>
-        </td>
-      `;
+        </td>`;
       tbody.appendChild(tr);
     });
     attachRowEvents();
@@ -113,7 +117,7 @@ function attachRowEvents(){
   document.querySelectorAll('.btn-delete').forEach(b => b.onclick = handleDeleteProduct);
 }
 
-// ---------- Add product ----------
+/* -------- Add product -------- */
 async function handleAddProduct(evt){
   evt.preventDefault();
   const form = document.getElementById('addForm');
@@ -131,8 +135,8 @@ async function handleAddProduct(evt){
   try {
     let imageUrl = '';
     if(file){
-      const up = await uploadImage(file, { sku: sku }); // uses session credentials
-      if(!up || !up.ok){ showMsg('addMsg','อัปโหลดรูปไม่สำเร็จ', true); return; }
+      const up = await uploadImage(file, { sku: sku });
+      if(!up || !up.ok) { showMsg('addMsg','อัปโหลดรูปไม่สำเร็จ', true); return; }
       imageUrl = up.imageUrl || '';
     }
     const s = getSession();
@@ -143,22 +147,7 @@ async function handleAddProduct(evt){
   } catch(err){ console.error(err); showMsg('addMsg','เพิ่มสินค้าไม่สำเร็จ: ' + err.message, true); }
 }
 
-// ---------- Edit / Delete ----------
-async function handleEdit(e){
-  const sku = e.target.dataset.sku;
-  const name = prompt('ชื่อสินค้าใหม่ (ปล่อยว่าง = ไม่เปลี่ยน):');
-  const cost = prompt('ต้นทุน (ปล่อยว่าง = ไม่เปลี่ยน):');
-  const status = prompt('สถานะ (ปล่อยว่าง = ไม่เปลี่ยน):');
-  const qty = prompt('จำนวน (ปล่อยว่าง = ไม่เปลี่ยน):');
-  const s = getSession();
-  const payload = { action:'update', adminId:s.adminId, adminPassword:s.adminPassword, sku: sku };
-  if(name) payload.name = name;
-  if(cost) payload.cost = Number(cost);
-  if(status) payload.status = status;
-  if(qty) payload.quantity = Number(qty);
-  const res = await apiPost(payload);
-  if(res && res.ok){ alert('แก้ไขเรียบร้อย'); loadProducts(); } else alert('แก้ไขไม่สำเร็จ: ' + (res && res.error));
-}
+/* -------- Delete product -------- */
 async function handleDeleteProduct(e){
   const sku = e.target.dataset.sku;
   if(!confirm('ยืนยันการลบ ' + sku + ' ?')) return;
@@ -168,13 +157,12 @@ async function handleDeleteProduct(e){
   if(res && res.ok){ alert('ลบเรียบร้อย'); loadProducts(); } else alert('ลบไม่สำเร็จ: ' + (res && res.error));
 }
 
-// ---------- In/Out Modal (new) ----------
-function createInOutModal(){ 
-  // if exists return it
+/* -------- In/Out modal (existing) -------- */
+function createInOutModal(){
   if(document.getElementById('inoutModal')) return document.getElementById('inoutModal');
   const wrap = document.createElement('div');
   wrap.id = 'inoutModal';
-  wrap.style = 'position:fixed;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.4);z-index:9999;';
+  wrap.style = 'position:fixed;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);z-index:9999;';
   wrap.innerHTML = `
     <div style="width:360px;background:#fff;border-radius:6px;padding:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);">
       <h3 id="inoutTitle" style="margin:0 0 8px 0;font-size:18px"></h3>
@@ -194,11 +182,9 @@ function createInOutModal(){
     </div>
   `;
   document.body.appendChild(wrap);
-  // event listeners
   wrap.querySelector('#inoutCancel').addEventListener('click', ()=>{ wrap.style.display='none'; });
   return wrap;
 }
-
 function openInOutModal(sku, type){
   const modal = createInOutModal();
   modal.style.display = 'flex';
@@ -210,7 +196,6 @@ function openInOutModal(sku, type){
   noteEl.value = '';
   msgEl.textContent = '';
   const confirmBtn = document.getElementById('inoutConfirm');
-  // remove previous listener by cloning (clean)
   const newConfirm = confirmBtn.cloneNode(true);
   confirmBtn.parentNode.replaceChild(newConfirm, confirmBtn);
   newConfirm.addEventListener('click', async ()=>{
@@ -220,16 +205,14 @@ function openInOutModal(sku, type){
     try {
       await performInOut(sku, type, q, noteEl.value || '');
       msgEl.style.color='green'; msgEl.textContent = 'บันทึกสำเร็จ';
-      // small delay then close and reload
-      setTimeout(()=>{ modal.style.display='none'; newConfirm.disabled = false; newConfirm.textContent = (type==='in'?'ยืนยัน':'ยืนยัน'); loadProducts(); }, 600);
+      setTimeout(()=>{ modal.style.display='none'; newConfirm.disabled=false; newConfirm.textContent='ยืนยัน'; loadProducts(); }, 600);
     } catch(err){
       console.error('InOut error', err);
       msgEl.style.color='red'; msgEl.textContent = 'ผิดพลาด: ' + (err.message||err);
-      newConfirm.disabled = false; newConfirm.textContent = (type==='in'?'ยืนยัน':'ยืนยัน');
+      newConfirm.disabled=false; newConfirm.textContent='ยืนยัน';
     }
   });
 }
-
 async function performInOut(sku, type, qty, note){
   const s = getSession();
   const params = { action:'history_add', adminId:s.adminId, adminPassword:s.adminPassword, sku: sku, actionType: type, qty: qty, note: note || '' };
@@ -238,11 +221,141 @@ async function performInOut(sku, type, qty, note){
   return res;
 }
 
-// ---------- Init / Events ----------
+/* -------- Edit modal (NEW) -------- */
+function createEditModal(){
+  if(document.getElementById('editModal')) return document.getElementById('editModal');
+  const wrap = document.createElement('div');
+  wrap.id = 'editModal';
+  wrap.style = 'position:fixed;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);z-index:10000;visibility:hidden';
+  wrap.innerHTML = `
+    <div style="width:420px;background:#fff;border-radius:8px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,0.25);">
+      <h3 id="editTitle" style="margin:0 0 10px 0">แก้ไขสินค้า</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <label>SKU<input id="editSku" style="width:100%"></label>
+        <label>หมวดหมู่<input id="editCategory" style="width:100%"></label>
+        <label style="grid-column:1 / 3">ชื่อ<input id="editName" style="width:100%"></label>
+        <label>จำนวน<input id="editQuantity" type="number" min="0"></label>
+        <label>ต้นทุน<input id="editCost" type="number" min="0"></label>
+        <label style="grid-column:1 / 2">สถานะ<input id="editStatus" style="width:100%"></label>
+        <label style="grid-column:1 / 3">รูปปัจจุบัน<div id="editImagePreview" style="margin-top:6px"></div></label>
+        <label style="grid-column:1 / 3">อัปโหลดรูปใหม่<input id="editFile" type="file" accept="image/*"></label>
+      </div>
+      <div style="text-align:right;margin-top:12px">
+        <button id="editCancel" style="margin-right:8px">ยกเลิก</button>
+        <button id="editSave" class="btn-success">บันทึก</button>
+      </div>
+      <div id="editMsg" style="margin-top:8px"></div>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+  wrap.querySelector('#editCancel').addEventListener('click', ()=>{ wrap.style.visibility='hidden'; });
+  return wrap;
+}
+
+/* open edit modal with prefilled values */
+function openEditModal(product){
+  const modal = createEditModal();
+  modal.style.visibility = 'visible';
+  document.getElementById('editTitle').textContent = 'แก้ไขสินค้า — ' + product.sku;
+  document.getElementById('editSku').value = product.sku;
+  document.getElementById('editName').value = product.name || '';
+  document.getElementById('editQuantity').value = Number(product.quantity) || 0;
+  document.getElementById('editCost').value = Number(product.cost) || 0;
+  document.getElementById('editStatus').value = product.status || '';
+  document.getElementById('editCategory').value = product.category || '';
+  const preview = document.getElementById('editImagePreview');
+  preview.innerHTML = product.imageUrl ? `<img src="${esc(product.imageUrl)}" style="width:84px;height:84px;object-fit:cover;border-radius:6px">` : 'ไม่มีรูป';
+  document.getElementById('editFile').value = '';
+  document.getElementById('editMsg').textContent = '';
+
+  const saveBtn = document.getElementById('editSave');
+  const newSave = saveBtn.cloneNode(true);
+  saveBtn.parentNode.replaceChild(newSave, saveBtn);
+  newSave.addEventListener('click', async ()=>{
+    await performEdit(product.sku);
+  });
+}
+
+/* perform edit logic: upload image if provided, then update or add/delete when SKU changed */
+async function performEdit(originalSku){
+  const s = getSession();
+  const modal = document.getElementById('editModal');
+  const msgEl = document.getElementById('editMsg');
+  const newSku = document.getElementById('editSku').value.trim();
+  const name = document.getElementById('editName').value.trim();
+  const quantity = Number(document.getElementById('editQuantity').value || 0);
+  const cost = Number(document.getElementById('editCost').value || 0);
+  const status = document.getElementById('editStatus').value.trim();
+  const category = document.getElementById('editCategory').value.trim();
+  const fileEl = document.getElementById('editFile');
+  const file = fileEl && fileEl.files && fileEl.files[0];
+
+  msgEl.style.color = 'black'; msgEl.textContent = 'กำลังบันทึก...';
+  document.getElementById('editSave').disabled = true;
+
+  try {
+    let imageUrl = null;
+    if(file){
+      const up = await uploadImage(file, { sku: newSku || originalSku });
+      if(!up || !up.ok) throw new Error('อัปโหลดรูปไม่สำเร็จ');
+      imageUrl = up.imageUrl;
+    }
+
+    if(newSku !== originalSku){
+      // check if newSku exists
+      const check = await apiGet({ action:'list', q: newSku, limit:1 });
+      if(check && check.data && check.data.some(it => (''+it.sku) === newSku)){
+        throw new Error('SKU ใหม่ซ้ำอยู่แล้ว โปรดเลือก SKU อื่น');
+      }
+      // create new row with newSku
+      const addParams = {
+        action:'add', adminId: s.adminId, adminPassword: s.adminPassword,
+        sku: newSku, name: name, quantity: quantity, cost: cost, status: status, category: category
+      };
+      if(imageUrl) addParams.imageUrl = imageUrl;
+      const addRes = await apiPost(addParams);
+      if(!addRes || !addRes.ok) throw new Error('ไม่สามารถสร้าง SKU ใหม่: ' + (addRes && addRes.error));
+      // delete old sku (soft delete)
+      const delRes = await apiPost({ action:'delete', adminId: s.adminId, adminPassword: s.adminPassword, sku: originalSku });
+      if(!delRes || !delRes.ok) console.warn('Delete old sku failed:', delRes);
+      msgEl.style.color = 'green'; msgEl.textContent = 'บันทึกสำเร็จ (เปลี่ยน SKU)';
+      setTimeout(()=>{ modal.style.visibility='hidden'; loadProducts(); }, 700);
+    } else {
+      // SKU unchanged -> update
+      const upd = { action:'update', adminId: s.adminId, adminPassword: s.adminPassword, sku: originalSku };
+      if(name !== undefined) upd.name = name;
+      if(!Number.isNaN(quantity)) upd.quantity = quantity;
+      if(!Number.isNaN(cost)) upd.cost = cost;
+      if(status !== undefined) upd.status = status;
+      if(category !== undefined) upd.category = category;
+      if(imageUrl) upd.imageUrl = imageUrl;
+      const res = await apiPost(upd);
+      if(!res || !res.ok) throw new Error(res && res.error ? res.error : 'update failed');
+      msgEl.style.color = 'green'; msgEl.textContent = 'บันทึกสำเร็จ';
+      setTimeout(()=>{ modal.style.visibility='hidden'; loadProducts(); }, 500);
+    }
+  } catch(err){
+    console.error('performEdit error', err);
+    msgEl.style.color = 'red'; msgEl.textContent = 'ผิดพลาด: ' + (err.message || err);
+  } finally {
+    document.getElementById('editSave').disabled = false;
+  }
+}
+
+/* -------- handleEdit (open modal with product data) -------- */
+async function handleEdit(e){
+  const sku = e.target.dataset.sku;
+  const res = await apiGet({ action:'get', sku: sku });
+  if(!res || !res.ok){ alert('ไม่พบข้อมูลสินค้า'); return; }
+  const p = res.data;
+  openEditModal(p);
+}
+
+/* -------- Init / Events -------- */
 function initAdmin(){
   initLoginUI();
   document.getElementById('refreshList').addEventListener('click', ()=> loadProducts(document.getElementById('searchBox').value));
-  document.getElementById('searchBox').addEventListener('keydown', (e)=> { if(e.key === 'Enter') loadProducts(e.target.value); });
+  document.getElementById('searchBox').addEventListener('keydown', (ev)=>{ if(ev.key === 'Enter') loadProducts(ev.target.value); });
   document.getElementById('addForm').addEventListener('submit', handleAddProduct);
   if(getSession().adminId) loadProducts();
 }
