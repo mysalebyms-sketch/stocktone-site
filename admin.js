@@ -199,16 +199,31 @@ function createEditModal(){
   });
   wrap.querySelector('#btnIn').addEventListener('click', ()=> openInOutFromEdit('in'));
   wrap.querySelector('#btnOut').addEventListener('click', ()=> openInOutFromEdit('out'));
-  wrap.querySelector('#btnDelete').addEventListener('click', async ()=>{
-    if(!confirm('ยืนยันการลบสินค้านี้?')) return;
-    const soft = document.getElementById('softDelete').checked;
-    const sku = document.getElementById('edit_sku').value.trim();
-    const s = getSession();
+  // แทนที่ส่วนเดิมที่ผูกกับ #btnDelete ด้วยโค้ดนี้
+wrap.querySelector('#btnDelete').addEventListener('click', async ()=>{
+  if(!confirm('ยืนยันการลบสินค้านี้?')) return;
+  const soft = document.getElementById('softDelete').checked; // ถ้าติ๊กเป็น soft delete
+  const sku = document.getElementById('edit_sku').value.trim();
+  const s = getSession();
+  try{
+    // ส่ง request
     const params = { action:'delete', adminId:s.adminId, adminPassword:s.adminPassword, sku: sku };
-    if(!soft) params.hard = 'true';
+    if(!soft) params.hard = 'true'; // hard delete เมื่อไม่ได้ติ๊ก soft
     const res = await apiPost(params);
-    if(res && res.ok){ alert('ลบเรียบร้อย'); createEditModal().style.visibility='hidden'; loadProducts(); } else alert('ลบไม่สำเร็จ: '+(res && res.error));
-  });
+    if(res && res.ok){
+      alert('ลบเรียบร้อย');
+      // ปิด modal
+      createEditModal().style.visibility = 'hidden';
+      // รีโหลดรายการ (จะใช้ handleList ที่ไม่คืน deleted โดย default)
+      await loadProducts();
+    } else {
+      alert('ลบไม่สำเร็จ: ' + (res && res.error));
+    }
+  } catch(err){
+    console.error('Delete error:', err);
+    alert('ข้อผิดพลาด: ' + err.message);
+  }
+});
 
   return wrap;
 }
