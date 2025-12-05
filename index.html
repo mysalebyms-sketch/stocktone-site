@@ -1,12 +1,25 @@
 <!doctype html>
 <html lang="th">
 <head>
-  <meta charset="utf-8">
-  <meta http-equiv="refresh" content="0;url=catalog.html">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Redirecting…</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>StockTone — Catalog</title>
+  <!-- รีไดเรกไป catalog.html เป็นหน้าเริ่มต้น -->
+  <meta http-equiv="refresh" content="0; url=catalog.html">
+  <style>
+    html,body{height:100%;margin:0;font-family:Inter, "Segoe UI", Roboto, Arial, sans-serif;background:#fbfaf7;color:#0f172a}
+    .wrap{max-width:820px;margin:6vh auto;padding:28px;background:#fff;border-radius:14px;box-shadow:0 10px 40px rgba(13,18,25,0.06);text-align:center}
+    h1{margin:0 0 8px;font-size:22px}
+    p{color:#6b7280}
+    a.btn{display:inline-block;margin-top:14px;padding:10px 18px;border-radius:10px;background:linear-gradient(90deg,#ffb56a,#ff8c3b);color:white;font-weight:700;text-decoration:none}
+  </style>
 </head>
 <body>
-  <p>กำลังไปที่ <a href="catalog.html">Catalog</a> — ถ้าเบราว์เซอร์ของคุณไม่รีไดเร็ก ให้คลิกลิงก์นี้</p>
+  <div class="wrap" role="main" aria-live="polite">
+    <h1>พาไปที่หน้า Catalog...</h1>
+    <p>ระบบจะพาไปยังหน้า Catalog โดยอัตโนมัติ หากไม่เปลี่ยน ให้คลิกที่ปุ่มด้านล่าง</p>
+    <p><a class="btn" href="catalog.html">ไปที่ Catalog</a></p>
+    <p style="font-size:13px;color:#9aa4ad;margin-top:14px">หากต้องการเปลี่ยนหน้าเริ่มต้น ให้วางไฟล์นี้ทับ หรือแก้ repo hosting setting</p>
+  </div>
 </body>
 </html>
