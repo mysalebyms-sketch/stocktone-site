@@ -1,11 +1,15 @@
-<!-- admin.html (Full Version) -->
 <!doctype html>
 <html lang="th">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Admin Panel - StockTone</title>
+  <title>StockTone - Admin Panel</title>
+  <!-- Font (optional) -->
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <!-- Main stylesheet (place style.css in same repo) -->
   <link rel="stylesheet" href="style.css">
+  <!-- App config (set APPS_SCRIPT_URL here) -->
   <script src="config.js"></script>
 </head>
 <body>
@@ -14,53 +18,96 @@
       <h1>StockTone - Admin Panel</h1>
     </header>
 
-    <!-- LOGIN SECTION -->
-    <section id="loginSection">
+    <!-- Login card -->
+    <section id="loginSection" class="card" aria-label="Login">
       <h2>เข้าสู่ระบบผู้ดูแล</h2>
-      <label>Admin ID <input id="adminId" type="text"></label>
-      <label>Password <input id="adminPassword" type="password"></label>
-      <button id="loginBtn">เข้าสู่ระบบ</button>
-      <div id="loginMsg" class="msg"></div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <label style="flex:1 1 220px">Admin ID
+          <input id="adminId" type="text" placeholder="Admin ID">
+        </label>
+        <label style="flex:1 1 220px">Password
+          <input id="adminPassword" type="password" placeholder="Password">
+        </label>
+        <div style="align-self:flex-end">
+          <button id="loginBtn">เข้าสู่ระบบ</button>
+        </div>
+      </div>
+      <div id="loginMsg" class="msg" style="margin-top:10px"></div>
     </section>
 
-    <!-- ADMIN AREA -->
+    <!-- Admin area (hidden until login) -->
     <section id="adminArea" style="display:none">
-      <div class="topbar">
-        <span>ผู้ใช้: <b id="who"></b></span>
-        <button id="logoutBtn">ออกจากระบบ</button>
+      <div class="card" style="display:flex;justify-content:space-between;align-items:center">
+        <div>ผู้ใช้: <strong id="who"></strong></div>
+        <div>
+          <button id="logoutBtn" class="btn-danger">ออกจากระบบ</button>
+        </div>
       </div>
 
-      <!-- ADD PRODUCT -->
-      <h2>เพิ่มสินค้าใหม่</h2>
-      <form id="addForm">
-        <label>SKU <input name="sku" required></label>
-        <label>ชื่อสินค้า <input name="name"></label>
-        <label>จำนวน <input name="quantity" type="number" min="0" value="0"></label>
-        <label>ต้นทุน <input name="cost" type="number" min="0" value="0"></label>
-        <label>สถานะ <input name="status" value="active"></label>
-        <label>หมวดหมู่ <input name="category"></label>
-        <label>อัปโหลดรูป <input id="fileInput" type="file" accept="image/*"></label>
-        <button type="submit">เพิ่มสินค้า</button>
-      </form>
-      <div id="addMsg" class="msg"></div>
+      <!-- Add product card -->
+      <section class="card" aria-label="Add product">
+        <h2>เพิ่มสินค้าใหม่</h2>
+        <form id="addForm" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
+          <label style="grid-column:1 / 2">SKU
+            <input name="sku" required>
+          </label>
+          <label style="grid-column:2 / 3">หมวดหมู่
+            <input name="category" placeholder="หมวดหมู่">
+          </label>
 
-      <!-- PRODUCT LIST -->
-      <h2>รายการสินค้า</h2>
-      <input id="searchBox" placeholder="ค้นหาสินค้า...">
-      <button id="refreshList">โหลดใหม่</button>
+          <label style="grid-column:1 / 2">ชื่อสินค้า
+            <input name="name">
+          </label>
+          <label style="grid-column:2 / 3">สถานะ
+            <input name="status" value="active">
+          </label>
 
-      <table id="productTable">
-        <thead>
-          <tr>
-            <th>รูป</th><th>SKU</th><th>ชื่อ</th><th>จำนวน</th><th>ต้นทุน</th><th>สถานะ</th><th>จัดการ</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <div id="listMsg" class="msg"></div>
+          <label>จำนวน
+            <input name="quantity" type="number" min="0" value="0">
+          </label>
+          <label>ต้นทุน
+            <input name="cost" type="number" min="0" value="0">
+          </label>
+
+          <label style="grid-column:1 / 2">อัปโหลดรูป
+            <input id="fileInput" type="file" accept="image/*">
+          </label>
+
+          <div style="grid-column:1 / 3;display:flex;gap:12px;align-items:center">
+            <button type="submit" class="btn-success">เพิ่มสินค้า</button>
+            <div id="addMsg" class="msg"></div>
+          </div>
+        </form>
+      </section>
+
+      <!-- Products list -->
+      <section class="card" aria-label="Products list">
+        <h2>รายการสินค้า</h2>
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+          <input id="searchBox" placeholder="ค้นหาสินค้า..." style="flex:1;">
+          <button id="refreshList">โหลดใหม่</button>
+        </div>
+
+        <div style="overflow:auto">
+          <table id="productTable" role="table">
+            <thead>
+              <tr>
+                <th>รูป</th><th>SKU</th><th>ชื่อ</th><th>จำนวน</th><th>ต้นทุน</th><th>สถานะ</th><th>จัดการ</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div id="listMsg" class="msg" style="margin-top:8px"></div>
+      </section>
+
     </section>
   </div>
 
+  <!-- Modal root (JS will create content) -->
+  <div id="modalRoot"></div>
+
+  <!-- Scripts -->
   <script src="admin.js"></script>
 </body>
 </html>
