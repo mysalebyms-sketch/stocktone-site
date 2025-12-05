@@ -375,4 +375,90 @@ button.danger{ background:var(--danger); }
   color: #ff8c00;
 }
 
+/* ---------- Product image / card sizing ---------- */
+/* ใช้ aspect-ratio + fixed height เพื่อควบคุมขนาดอย่างเป็นระบบ */
+.product-card {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 6px 18px rgba(20,20,40,0.05);
+}
+
+/* thumbnail wrapper: กำหนดอัตราส่วนให้เป็น 16:9 (หรือปรับตามต้องการ) */
+.product-card .thumb{
+  width:100%;
+  aspect-ratio: 16/9;    /* รักษาสัดส่วนบนทุกขนาดจอ */
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#fafafa;
+  border-bottom:1px solid #f1f5f9;
+}
+
+/* รูปจริง: ครอปเต็มพื้นที่และไม่เบี้ยว */
+.product-card .thumb img,
+.cards-grid .product-card img {
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+  border-radius:0;
+}
+
+/* ขนาดหัว card (mobile-first) */
+.cards-grid {
+  display:grid;
+  grid-template-columns: 1fr;
+  gap:20px;
+}
+@media (min-width:700px){
+  .cards-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (min-width:1100px){
+  .cards-grid { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+/* ให้ข้อมูลใน card มี spacing สวยงาม */
+.product-body {
+  padding:14px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  flex:1;
+}
+.product-title { margin:0; font-size:18px; font-weight:600; }
+.product-price { color:#ff8c00; font-weight:700; margin-top:6px; }
+
+/* ปรับปุ่มดูรายละเอียด ให้เต็มแนวนอนใน card (option) */
+.btn-detail {
+  background:#3b82f6;
+  color:#fff;
+  border:none;
+  padding:10px 12px;
+  border-radius:8px;
+  cursor:pointer;
+  display:inline-block;
+}
+
+/* Qty controls เล็กน้อย */
+.qty-controls { display:flex; align-items:center; gap:8px; }
+.qty-controls button { width:34px; height:34px; border-radius:6px; border:1px solid #e6e9ef; background:#fff; cursor:pointer; }
+
+/* ---------- Hide top SKU / hero if present ---------- */
+/* ถ้า element SKU ด้านบนมี class .hero-card หรือ .top-feature ให้ซ่อน */
+.hero-card .prod-sku,
+.top-feature .prod-sku,
+.featured-card .prod-sku {
+  display:none !important;
+}
+
+/* ถ้ายังไม่สะดวกแก้ HTML: ถ้าเพจมี element .large-feature (ตัวอย่างที่คุณเห็น) ก็ซ่อนทั้งบล็อก */
+.large-feature, .hero-card, .top-feature { display:none !important; }
+
+/* ---------- small polish ---------- */
+.product-card:hover { transform: translateY(-6px); transition: transform .18s ease; }
+
 /* End of style.css */
+
