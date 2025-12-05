@@ -3,71 +3,88 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>StockTone — History</title>
+  <title>History — StockTone</title>
   <link rel="stylesheet" href="style.css">
   <script src="config.js"></script>
 </head>
 <body>
-  <main class="container">
-    <header class="site-header">
-      <h1>History</h1>
-      <p class="muted">ประวัติการเพิ่ม/รับเข้า/ตัดออก (เรียงล่าสุดก่อน)</p>
-    </header>
-
-    <section class="card">
-      <div class="search-row">
-        <input id="h_sku" placeholder="กรองตาม SKU (optional)"/>
-        <button id="h_load">โหลด</button>
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <div class="brand-badge">🕘</div>
+        <div>
+          <div class="site-title">StockTone</div>
+          <div class="site-sub">ประวัติรับเข้า / ตัดออก</div>
+        </div>
       </div>
+      <div class="header-actions">
+        <input id="qSku" class="input" placeholder="กรอก SKU เพื่อกรอง (optional)">
+        <button id="btnLoad" class="btn">โหลด</button>
+      </div>
+    </div>
 
-      <div id="historyMsg" class="muted small">ยังไม่ได้โหลด</div>
-      <table id="historyTable" class="table">
-        <thead><tr><th>เวลา</th><th>SKU</th><th>action</th><th>qty</th><th>note</th><th>admin</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </section>
+    <nav class="nav-bar">
+      <div class="container nav-inner">
+        <button class="nav-btn" onclick="location.href='catalog.html'">Catalog</button>
+        <button class="nav-btn active">History</button>
+        <button class="nav-btn" onclick="location.href='admin.html'">Admin</button>
+      </div>
+    </nav>
+  </header>
 
-    <footer class="site-footer">
-      <a href="admin.html">← กลับ Admin</a>
-    </footer>
+  <main class="container" style="margin-top:18px">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h3 style="margin:0">ประวัติรายการ</h3>
+        <div class="muted">เรียงล่าสุดขึ้นก่อน</div>
+      </div>
+      <div id="histList" style="min-height:120px">กำลังโหลด...</div>
+    </div>
   </main>
 
+  <footer class="site-footer container">StockTone — history</footer>
+
   <script>
-    async function apiGet(params){
-      const url = APPS_SCRIPT_URL + '?' + new URLSearchParams(params).toString();
+    async function apiGet(p){
+      if(typeof APPS_SCRIPT_URL === 'undefined' || !APPS_SCRIPT_URL) throw new Error('APPS_SCRIPT_URL not set');
+      const url = APPS_SCRIPT_URL + '?' + new URLSearchParams(p).toString();
       const r = await fetch(url);
       return r.json();
     }
 
-    async function loadHistory(sku){
-      const msg = document.getElementById('historyMsg');
-      msg.textContent = 'กำลังโหลด...';
+    function renderHistory(rows){
+      const wrap = document.getElementById('histList');
+      wrap.innerHTML = '';
+      if(!rows || rows.length === 0){ wrap.innerHTML = '<div class="empty">ไม่มีประวัติ</div>'; return; }
+      const ul = document.createElement('ul'); ul.style.paddingLeft='18px';
+      rows.forEach(r => {
+        const li = document.createElement('li');
+        li.style.marginBottom='10px';
+        const t = document.createElement('div');
+        t.innerHTML = `<strong>${r.action || r.actionType || ''}</strong> — SKU: <em>${r.sku || ''}</em> | จำนวน: ${r.qty||r[2]||0} | หมายเหตุ: ${r.note||r[4]||''} <div class="muted small">${r[0] || r.timestamp || ''} — by ${r.admin || r[5] || ''}</div>`;
+        li.appendChild(t);
+        ul.appendChild(li);
+      });
+      wrap.appendChild(ul);
+    }
+
+    async function loadHistory(){
       try{
+        document.getElementById('histList').textContent = 'กำลังโหลด...';
+        const sku = document.getElementById('qSku').value.trim();
         const params = { action:'history_list', limit:200 };
         if(sku) params.sku = sku;
-        const r = await apiGet(params);
-        if(!r.ok){ msg.textContent = 'โหลดล้มเหลว'; return; }
-        const tbody = document.querySelector('#historyTable tbody');
-        tbody.innerHTML = '';
-        (r.data||[]).forEach(row=>{
-          const tr = document.createElement('tr');
-          tr.innerHTML = '<td>'+ (row.timestamp||'') +'</td>'
-                       + '<td>'+ (row.sku||'') +'</td>'
-                       + '<td>'+ (row.action||'') +'</td>'
-                       + '<td>'+ (row.qty||'') +'</td>'
-                       + '<td>'+ (row.note||'') +'</td>'
-                       + '<td>'+ (row.adminId || row.admin || '') +'</td>';
-          tbody.appendChild(tr);
-        });
-        msg.textContent = 'โหลดสำเร็จ ' + (r.total||0);
+        const res = await apiGet(params);
+        if(!res || !res.ok) { document.getElementById('histList').textContent = 'โหลดไม่สำเร็จ'; return; }
+        renderHistory(res.data || []);
       }catch(err){
-        msg.textContent = 'ข้อผิดพลาด: ' + err.message;
+        console.error(err);
+        document.getElementById('histList').textContent = 'ข้อผิดพลาด: ' + err.message;
       }
     }
 
-    document.getElementById('h_load').addEventListener('click', ()=> loadHistory(document.getElementById('h_sku').value.trim()));
-    // initial load
-    loadHistory();
+    document.getElementById('btnLoad').addEventListener('click', loadHistory);
+    document.addEventListener('DOMContentLoaded', loadHistory);
   </script>
 </body>
 </html>
