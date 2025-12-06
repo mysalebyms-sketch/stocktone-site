@@ -1,25 +1,406 @@
 <!doctype html>
 <html lang="th">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>StockTone — Catalog</title>
-  <!-- รีไดเรกไป catalog.html เป็นหน้าเริ่มต้น -->
-  <meta http-equiv="refresh" content="0; url=catalog.html">
-  <style>
-    html,body{height:100%;margin:0;font-family:Inter, "Segoe UI", Roboto, Arial, sans-serif;background:#fbfaf7;color:#0f172a}
-    .wrap{max-width:820px;margin:6vh auto;padding:28px;background:#fff;border-radius:14px;box-shadow:0 10px 40px rgba(13,18,25,0.06);text-align:center}
-    h1{margin:0 0 8px;font-size:22px}
-    p{color:#6b7280}
-    a.btn{display:inline-block;margin-top:14px;padding:10px 18px;border-radius:10px;background:linear-gradient(90deg,#ffb56a,#ff8c3b);color:white;font-weight:700;text-decoration:none}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ระบบดูสต๊อกสินค้า — Viewer</title>
+
+<link rel="preconnect" href="https://fonts.gstatic.com">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg:#fff5f9;
+    --card:#ffffff;
+    --muted:#7b7b7b;
+    --accent:#ff3b6a;
+    --accent-dark:#e02b5a;
+    --price:#ff3b6a;
+    --shadow: 0 6px 18px rgba(18,18,18,0.06);
+    --radius:12px;
+    --gap:16px;
+  }
+  *{box-sizing:border-box}
+  body{
+    font-family: 'Kanit', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background: linear-gradient(180deg,#ffeef6 0%, #fff0f5 100%);
+    margin:0;
+    padding:24px;
+    color:#222;
+  }
+
+  header.site-head{
+    max-width:1200px;
+    margin:0 auto 18px;
+    display:flex;
+    gap:12px;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .logo{
+    background:linear-gradient(90deg,#ff76b8,#ff3b6a);
+    color:white;
+    padding:14px 18px;
+    border-radius:14px;
+    font-weight:700;
+    box-shadow:var(--shadow);
+  }
+  .searchbar{
+    flex:1;
+    margin:0 18px;
+    display:flex;
+    gap:12px;
+  }
+  .searchbar input{
+    flex:1;
+    padding:12px 16px;
+    border-radius:12px;
+    border:1px solid rgba(0,0,0,0.06);
+    font-size:15px;
+  }
+  .filters{
+    display:flex;
+    gap:8px;
+  }
+  .filter-select{
+    padding:10px 12px;
+    border-radius:10px;
+    background:white;
+    border:1px solid rgba(0,0,0,0.06);
+    font-size:14px;
+  }
+
+  main.container{ max-width:1200px; margin: 0 auto; }
+
+  /* grid */
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap:var(--gap);
+  }
+  @media (max-width:1100px){ .grid{ grid-template-columns: repeat(4,1fr); } }
+  @media (max-width:900px){ .grid{ grid-template-columns: repeat(3,1fr); } }
+  @media (max-width:700px){ .grid{ grid-template-columns: repeat(2,1fr); } }
+  @media (max-width:420px){ .grid{ grid-template-columns: repeat(1,1fr); } }
+
+  /* card */
+  .card{
+    background:var(--card);
+    border-radius:12px;
+    padding:12px;
+    box-shadow:var(--shadow);
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    min-height:240px;
+  }
+  .card .thumb{
+    width:100%;
+    padding-top:100%;
+    position:relative;
+    border-radius:10px;
+    overflow:hidden;
+    background:linear-gradient(180deg,#fafafa,#fff);
+    border:1px solid rgba(0,0,0,0.03);
+  }
+  .card .thumb img{
+    position:absolute;
+    top:0;left:0;width:100%;height:100%;object-fit:cover;
+  }
+  .badge-row{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    font-size:12px;
+  }
+  .badge{
+    background:#0bd1a1;
+    color:#064b3a;
+    padding:4px 8px;
+    border-radius:8px;
+    font-weight:600;
+    box-shadow:0 2px 6px rgba(0,0,0,0.04);
+  }
+  .seller-badge{
+    background: #ffefc8;
+    color:#7a4a00;
+    padding:4px 8px;
+    border-radius:8px;
+    font-weight:600;
+  }
+  .title{
+    font-size:14px;
+    line-height:1.2;
+    min-height:40px;
+    color:#222;
+    font-weight:600;
+  }
+  .meta{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    margin-top:auto;
+  }
+  .price{
+    color:var(--price);
+    font-size:16px;
+    font-weight:700;
+  }
+  .price .old{
+    color:var(--muted);
+    font-weight:500;
+    font-size:13px;
+    text-decoration:line-through;
+    margin-left:8px;
+  }
+  .rating{
+    font-size:12px;
+    color:var(--muted);
+  }
+
+  .stock{
+    font-size:12px;
+    padding:6px 8px;
+    border-radius:16px;
+    background:linear-gradient(90deg,#dff7ff,#bdeeff);
+    color:#0b6b76;
+    font-weight:600;
+  }
+
+  /* helper */
+  .center{ text-align:center }
+  .controls{ display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+
+  /* loader */
+  .loader{ text-align:center; padding:40px; color:var(--muted) }
+
+  /* pagination */
+  .pagination{ display:flex; gap:8px; justify-content:center; margin:18px 0; }
+  .page-btn{
+    padding:8px 12px; border-radius:8px; background:white; border:1px solid rgba(0,0,0,0.06);
+  }
+
+  /* empty */
+  .empty { text-align:center; padding:60px; color:var(--muted) }
+
+</style>
 </head>
 <body>
-  <div class="wrap" role="main" aria-live="polite">
-    <h1>พาไปที่หน้า Catalog...</h1>
-    <p>ระบบจะพาไปยังหน้า Catalog โดยอัตโนมัติ หากไม่เปลี่ยน ให้คลิกที่ปุ่มด้านล่าง</p>
-    <p><a class="btn" href="catalog.html">ไปที่ Catalog</a></p>
-    <p style="font-size:13px;color:#9aa4ad;margin-top:14px">หากต้องการเปลี่ยนหน้าเริ่มต้น ให้วางไฟล์นี้ทับ หรือแก้ repo hosting setting</p>
+
+<header class="site-head">
+  <div class="brand">
+    <div class="logo">ระบบดูสต๊อก</div>
+    <div style="font-size:14px;color:var(--muted)">แสดงสินค้า (Viewer)</div>
   </div>
+
+  <div class="searchbar">
+    <input id="q" placeholder="🔍 ค้นหารหัสหรือชื่อสินค้า..." />
+    <div class="filters">
+      <select id="statusFilter" class="filter-select">
+        <option value="">สถานะ: ทั้งหมด</option>
+        <option value="active">พร้อมส่ง</option>
+        <option value="out">หมด</option>
+      </select>
+      <select id="catFilter" class="filter-select">
+        <option value="">ทุกหมวดหมู่</option>
+      </select>
+      <button id="searchBtn" class="page-btn">ค้นหา</button>
+    </div>
+  </div>
+
+  <div style="width:90px;text-align:right">
+    <!-- placeholder for link to admin -->
+    <a href="admin.html" style="text-decoration:none;color:#fff;background:var(--accent);padding:10px 12px;border-radius:10px;box-shadow:var(--shadow)">เข้าสู่ระบบ</a>
+  </div>
+</header>
+
+<main class="container">
+  <div class="controls">
+    <div id="totalInfo" style="font-weight:600;color:var(--muted)"></div>
+    <div style="margin-left:auto" id="sortArea"></div>
+  </div>
+
+  <div id="gridWrap">
+    <div class="grid" id="grid"></div>
+    <div class="loader" id="loader" style="display:none">กำลังโหลด...</div>
+    <div class="empty" id="empty" style="display:none">ไม่มีสินค้า</div>
+  </div>
+
+  <div class="pagination" id="pagination"></div>
+</main>
+
+<script src="config.js"></script>
+<script>
+/* Minimal, safe helper functions */
+function escapeHtml(s){
+  if(s === null || s === undefined) return '';
+  return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
+}
+
+function normalizeDriveLink(url){
+  if(!url) return '';
+  const m = url.match(/\/d\/([a-zA-Z0-9_-]{10,})/) || url.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
+  if(m) return 'https://lh3.googleusercontent.com/d/' + m[1];
+  return url;
+}
+
+/* UI rendering */
+const grid = document.getElementById('grid');
+const loader = document.getElementById('loader');
+const empty = document.getElementById('empty');
+const totalInfo = document.getElementById('totalInfo');
+const pagination = document.getElementById('pagination');
+
+let page = 1;
+const limit = 20;
+
+async function fetchProducts({q='', status='', category='', page=1, limit=20}){
+  const url = new URL(APPS_SCRIPT_URL);
+  url.searchParams.set('action','list');
+  url.searchParams.set('limit', limit);
+  url.searchParams.set('page', page);
+  if(q) url.searchParams.set('q', q);
+  if(status) url.searchParams.set('status', status);
+  if(category) url.searchParams.set('category', category);
+  loader.style.display = 'block';
+  try{
+    const res = await fetch(url.toString());
+    const data = await res.json();
+    return data;
+  }catch(err){
+    console.error(err);
+    return {ok:false, data:[], total:0};
+  } finally { loader.style.display = 'none'; }
+}
+
+function renderCard(p){
+  const img = normalizeDriveLink(p.imageUrl) || '/mnt/data/ad93f675-bb73-4858-865d-1ca29fc65cbe.png';
+  const sku = escapeHtml(p.sku);
+  const name = escapeHtml(p.name);
+  const qty = Number(p.quantity) || 0;
+  const cost = (Number(p.cost) || 0).toFixed(2);
+  const status = (p.status || '').toLowerCase();
+  const sellerBadge = Math.random() < 0.2 ? '<div class="seller-badge">ร้านแนะนำ</div>' : '';
+  const rating = (Math.random()*1.2+4).toFixed(1);
+
+  const stockLabel = qty <= 0 ? '<div class="stock">หมด</div>' : `<div class="stock">พร้อมส่ง</div>`;
+
+  return `
+    <div class="card" role="article" data-sku="${sku}">
+      <div class="thumb">
+        <img loading="lazy" src="${img}" alt="${name}">
+      </div>
+      <div class="badge-row" style="margin-top:6px">
+        ${sellerBadge}
+        <div style="flex:1"></div>
+        <div class="rating">⭐ ${rating}</div>
+      </div>
+      <div class="title" title="${name}">${name}</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+        <div class="price">฿${cost}</div>
+        <div class="meta" style="flex:1">
+          <div style="font-size:13px;color:var(--muted)">รหัส ${sku}</div>
+          ${stockLabel}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderGrid(products){
+  grid.innerHTML = products.map(renderCard).join('');
+}
+
+/* pagination render */
+function renderPagination(total, page, limit){
+  const pages = Math.ceil(total / limit) || 1;
+  pagination.innerHTML = '';
+  const addBtn = (label, p, disabled=false) => {
+    const btn = document.createElement('button');
+    btn.className = 'page-btn';
+    btn.textContent = label;
+    btn.disabled = disabled;
+    btn.addEventListener('click', ()=> { load({page:p}); });
+    return btn;
+  };
+  pagination.appendChild(addBtn('‹ Prev', Math.max(1,page-1), page<=1));
+  // show up to 5 pages
+  const start = Math.max(1, page-2);
+  const end = Math.min(pages, start+4);
+  for(let i=start;i<=end;i++){
+    const b = addBtn(i, i, false);
+    if(i===page){
+      b.style.fontWeight='700';
+      b.style.background='linear-gradient(90deg,#ff76b8,#ff3b6a)';
+      b.style.color='white';
+    }
+    pagination.appendChild(b);
+  }
+  pagination.appendChild(addBtn('Next ›', Math.min(pages,page+1), page>=pages));
+}
+
+/* load data */
+async function load({q='', status='', category='', page=1, limit=20} = {}){
+  grid.innerHTML = '';
+  empty.style.display = 'none';
+  loader.style.display = 'block';
+  const res = await fetchProducts({q,status,category,page,limit});
+  loader.style.display = 'none';
+  if(!res.ok){
+    empty.style.display = 'block';
+    empty.textContent = 'เกิดข้อผิดพลาดในการดึงข้อมูล';
+    return;
+  }
+  const products = res.data || [];
+  if(products.length === 0){
+    empty.style.display = 'block';
+    empty.textContent = 'ไม่มีสินค้า';
+    totalInfo.textContent = 'พบ 0 รายการ';
+    pagination.innerHTML = '';
+  } else {
+    empty.style.display = 'none';
+    renderGrid(products);
+    totalInfo.textContent = `พบ ${res.total || products.length} รายการ`;
+    renderPagination(res.total || products.length, page, limit);
+  }
+}
+
+/* wire up search/filter */
+document.getElementById('searchBtn').addEventListener('click', ()=>{
+  const q = document.getElementById('q').value.trim();
+  const status = document.getElementById('statusFilter').value;
+  page = 1;
+  load({q,status,page,limit});
+});
+
+/* init */
+load({page:1, limit});
+
+/* optional: load categories into dropdown by scanning returned products */
+async function loadCategories(){
+  const r = await fetchProducts({limit:1000,page:1});
+  if(r.ok && r.data){
+    const cats = new Set();
+    r.data.forEach(p=>{ if(p.category) cats.add(p.category); });
+    const sel = document.getElementById('catFilter');
+    cats.forEach(c=>{
+      const o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o);
+    });
+    sel.addEventListener('change', ()=> {
+      const q = document.getElementById('q').value.trim();
+      const status = document.getElementById('statusFilter').value;
+      load({q, status, category: sel.value, page:1, limit});
+    });
+  }
+}
+loadCategories();
+
+</script>
 </body>
 </html>
