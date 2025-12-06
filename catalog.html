@@ -4,12 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>ล้อพาณิชย์ — Catalog</title>
-  <meta name="description" content="ล้อพาณิชย์ - ดูจำนวนสินค้าได้ด้านล่าง" />
-
+  <meta name="description" content="ล้อพาณิชย์ - ดูจำนวนสินค้าได้ที่ด้านล่าง" />
   <style>
-    /* =====================
-       Single-file style — warm pastel (yellow-orange)
-       ===================== */
     :root{
       --bg: #fff8f3;
       --card: #ffffff;
@@ -18,7 +14,7 @@
       --muted: #6b7280;
       --radius: 14px;
       --shadow-sm: 0 6px 18px rgba(16,24,40,0.06);
-      --container: 20px;
+      --container: 18px;
       --text: #0f172a;
     }
     *{box-sizing:border-box}
@@ -31,48 +27,44 @@
       -webkit-font-smoothing:antialiased;
       -moz-osx-font-smoothing:grayscale;
     }
-
-    /* container */
     .container{max-width:1100px;margin:0 auto;padding:18px}
 
-    /* header (sticky) */
-    .site-header{
-      position:sticky;
-      top:0;
-      z-index:50;
+    /* header area (not sticky now to prevent overlap) */
+    .site-top{
+      padding:10px 0 0 0;
       background:transparent;
-      backdrop-filter: blur(6px);
-      padding:12px 0;
     }
-    .header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 18px}
-    .brand{display:flex;align-items:center;gap:12px}
-    .brand-logo-wrap{
-      width:54px; height:54px; border-radius:12px; background:linear-gradient(180deg,var(--accent),var(--accent-2));
-      display:flex;align-items:center;justify-content:center; box-shadow:0 6px 18px rgba(255,160,60,0.12);
-      flex-shrink:0;
+    .brand-row{ display:flex; gap:16px; align-items:center; padding:10px 6px; }
+    .brand-mark{
+      width:64px; height:64px; border-radius:14px;
+      background:linear-gradient(180deg,var(--accent),var(--accent-2));
+      display:flex;align-items:center;justify-content:center; flex-shrink:0;
+      box-shadow:0 8px 20px rgba(255,160,60,0.12);
     }
-    .brand-logo{width:34px;height:34px}
-    .brand-texts{display:flex;flex-direction:column;gap:2px}
-    .brand-title{font-size:20px;font-weight:800;color:#112;letter-spacing:0.2px}
-    .brand-sub{font-size:13px;color:var(--muted)}
+    .brand-mark svg{ width:36px; height:36px; filter:brightness(1.05) saturate(.8); }
+    /* name box (orange frame around name per request) */
+    .brand-name-wrap{
+      padding:10px 16px; border-radius:12px; background:linear-gradient(90deg, rgba(255,179,77,0.12), rgba(255,159,28,0.06));
+      display:flex;flex-direction:column; gap:2px; min-width:160px;
+      box-shadow:0 6px 18px rgba(16,24,40,0.03);
+    }
+    .brand-title{ font-size:20px; font-weight:800; color:var(--text); line-height:1 }
+    .brand-sub{ font-size:13px; color:var(--muted); margin-top:4px }
 
-    /* NAV under brand */
-    .top-nav{display:flex;gap:10px;align-items:center}
+    /* NAV under brand (moved below) */
+    .nav-row{ margin-top:10px; display:flex; gap:12px; align-items:center; }
     .nav-btn{
-      background:transparent;border:0;padding:8px 14px;border-radius:999px;
-      box-shadow:none;cursor:pointer;font-weight:700;color:var(--muted);transition:all .15s;
+      border:0; padding:10px 16px; border-radius:999px; cursor:pointer; font-weight:700;
+      background:transparent; color:var(--muted); box-shadow:none; transition:all .15s ease;
     }
     .nav-btn.active{
       background:linear-gradient(90deg,var(--accent),var(--accent-2));
       color:#fff; box-shadow:0 8px 20px rgba(255,160,60,0.12);
     }
 
-    /* ensure main content starts below header (avoid overlapping) */
-    .main-content{padding-top:10px; margin-top:8px}
-
     /* filter card */
     .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:16px;margin-bottom:18px}
-    .filter-card{max-width:720px;margin:10px auto}
+    .filter-card{max-width:720px;margin:8px auto 18px}
     .filter-title{margin:0 0 8px 0;font-weight:700}
     label{display:block;margin:8px 0;font-size:14px}
     select,input[type="search"]{
@@ -83,19 +75,26 @@
     .btn-primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#fff;font-weight:700}
     .btn-ghost{background:transparent;border:1px solid rgba(0,0,0,0.04);color:var(--accent);font-weight:700}
 
-    /* result header */
-    .result-header{max-width:1100px;margin:10px auto 0;padding-left:6px}
+    /* result count */
+    .result-header{max-width:1100px;margin:6px auto 6px;padding-left:6px}
     .result-header h4{margin:8px 0;font-size:18px}
 
-    /* cards grid */
+    /* CARDS: 2 columns fixed (2x2 presentation) */
     .cards-grid{
       display:grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(2, 1fr); /* always 2 columns */
       gap:18px;
       align-items:start;
     }
-    @media(min-width:900px){ .cards-grid{ grid-template-columns: repeat(3,1fr); } }
-    @media(max-width:480px){ .cards-grid{ grid-template-columns: 1fr 1fr } }
+    @media(min-width:1000px){
+      /* keep two columns even on desktop per request (2x2) */
+      .cards-grid{ grid-template-columns: repeat(2,1fr); max-width:900px; margin:0 auto; }
+    }
+    @media(max-width:420px){
+      .cards-grid{ grid-template-columns: repeat(2,1fr); gap:12px; }
+      .brand-row{ padding:8px 6px; gap:10px }
+      .brand-mark{ width:56px;height:56px }
+    }
 
     /* product card */
     .product-card{
@@ -103,7 +102,7 @@
       transition:transform .18s ease;
     }
     .product-card:hover{ transform: translateY(-6px); }
-    .thumb{height:200px;display:flex;align-items:center;justify-content:center;background:#fff;border-bottom:1px solid #fbf2ea;padding:6px}
+    .thumb{height:180px;display:flex;align-items:center;justify-content:center;background:#fff;border-bottom:1px solid #fbf2ea;padding:6px}
     .thumb img{width:100%;height:100%;object-fit:cover;border-radius:8px}
     .card-body{padding:14px;display:flex;flex-direction:column;gap:8px;flex:1}
     .title-row{display:flex;align-items:center;gap:8px}
@@ -133,52 +132,39 @@
     .loading-spinner{width:18px;height:18px;border-radius:50%;border:3px solid rgba(0,0,0,0.06);border-top-color:var(--accent-2);animation:spin .9s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
 
-    /* empty state */
     .empty-state{text-align:center;color:var(--muted);padding:28px}
 
-    /* small responsive tweaks */
-    @media(max-width:520px){
-      .header-inner{padding:10px}
-      .brand-title{font-size:18px}
-      .brand-sub{font-size:12px}
-      .cards-grid{grid-template-columns:1fr}
-      .thumb{height:180px}
-      .filter-card{padding:12px}
-      .search-row{flex-direction:row}
-    }
-
-    /* fix: ensure main has top padding equal to header to avoid overlap while scrolling */
-    main.main-content{ padding-top:18px; margin-bottom:56px; }
-
-    /* small polish: result count style */
-    .result-header h4{color:var(--text); margin-left:4px}
+    /* ensure spacing so content doesn't overlap */
+    main.main-content{ padding-top:6px; margin-bottom:56px; }
   </style>
 </head>
 <body>
-  <!-- HEADER / BRAND -->
-  <header class="site-header" role="banner">
-    <div class="header-inner container">
-      <div class="brand">
-        <div class="brand-logo-wrap" aria-hidden="true">
-          <!-- SVG shop-box icon -->
-          <svg class="brand-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="2" y="6" width="20" height="12" rx="2" fill="white" opacity="0.04"/>
-            <path d="M3 7h18v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7z" fill="#FFD9A6"/>
-            <path d="M12 2L2 7v11a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V7L12 2z" fill="#FFB34D"/>
-            <path d="M9 11h6v6H9z" fill="#fff" opacity="0.08"/>
+  <!-- TOP: Brand + NAV -->
+  <header class="site-top">
+    <div class="container">
+      <div class="brand-row">
+        <div class="brand-mark" aria-hidden="true">
+          <!-- simple shop box SVG (decorative) -->
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="6" width="18" height="12" rx="3" fill="white" opacity="0.06"/>
+            <path d="M12 2L3 7v10a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V7L12 2z" fill="#fff" opacity="0.06"/>
           </svg>
         </div>
-        <div class="brand-texts">
-          <div class="brand-title">ล้อพาณิชย์</div>
-          <div class="brand-sub">ดูจำนวนสินค้าได้ที่ด้านล่าง</div>
+
+        <div style="flex:1;">
+          <div class="brand-name-wrap">
+            <div class="brand-title">ล้อพาณิชย์</div>
+            <div class="brand-sub">ดูจำนวนสินค้าได้ที่ด้านล่าง</div>
+          </div>
+
+          <!-- NAV buttons placed under brand as requested -->
+          <div class="nav-row" style="margin-top:12px;">
+            <button class="nav-btn active" data-view="catalog">หน้าร้าน</button>
+            <button class="nav-btn" data-view="history">ประวัติ</button>
+            <button class="nav-btn" data-view="admin">ผู้ดูแล</button>
+          </div>
         </div>
       </div>
-
-      <nav class="top-nav" role="navigation" aria-label="main nav">
-        <button class="nav-btn active" data-view="catalog">หน้าร้าน</button>
-        <button class="nav-btn" data-view="history">ประวัติ</button>
-        <button class="nav-btn" data-view="admin">ผู้ดูแล</button>
-      </nav>
     </div>
   </header>
 
@@ -213,25 +199,22 @@
       </div>
     </section>
 
-    <!-- History view (hidden by default) -->
+    <!-- History & Admin placeholders -->
     <section id="viewHistory" class="card" style="display:none;">
       <h3>ประวัติรับเข้า / ตัดออก</h3>
-      <p class="muted small">ยังไม่มีข้อมูลในหน้าประวัติ (ตัวอย่าง) — จะเชื่อมต่อเมื่อเปิดใช้งานเมนู Admin / API</p>
+      <p class="muted small">ยังไม่มีข้อมูลในหน้าประวัติ (ตัวอย่าง)</p>
     </section>
 
-    <!-- Admin view (hidden by default) -->
     <section id="viewAdmin" class="card" style="display:none;">
       <h3>แผงผู้ดูแล</h3>
       <p class="muted small">เข้าสู่ระบบผู้ดูแลเพื่อเพิ่ม แก้ไข และจัดการสินค้า</p>
     </section>
 
-    <!-- result count -->
     <div class="result-header">
       <h4 id="resultCount">กำลังโหลด...</h4>
     </div>
 
-    <!-- cards grid -->
-    <section id="catalogGrid" class="catalog-grid-wrap card" style="padding:12px 16px;">
+    <section id="catalogGrid" class="catalog-grid-wrap">
       <div id="cards" class="cards-grid" aria-live="polite"></div>
     </section>
 
@@ -266,29 +249,18 @@
     </div>
   </div>
 
-  <!-- Inline JS -->
   <script>
     (function(){
-      // <-- เปลี่ยน APPS_SCRIPT_URL ที่นี่เป็นของคุณถ้าจำเป็น -->
       const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbymrw5IvZQknZEqjm57AOJ68sbvZaBMsnLBflvXZsl51pgVgTK98Mjt1crqgH6RehScug/exec';
-
-      // placeholder
-      const PLACEHOLDER = 'data:image/svg+xml;utf8,' + encodeURIComponent(
-        '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480"><rect width="100%" height="100%" fill="#f6f6f6"/></svg>'
-      );
-
-      // helpers
+      const PLACEHOLDER = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480"><rect width="100%" height="100%" fill="#f6f6f6"/></svg>');
       const qs = s => document.querySelector(s);
       const qsa = s => Array.from(document.querySelectorAll(s));
-      const show = el => el && el.classList.remove('hidden'), hide = el => el && el.classList.add('hidden');
 
-      // spinner
       const spinner = {
         show(msg){ const g = qs('#globalSpinner'); if(!g) return; qs('#globalSpinnerText').textContent = msg || 'กำลังโหลด...'; g.classList.remove('hidden'); },
         hide(){ const g = qs('#globalSpinner'); if(g) g.classList.add('hidden'); }
       };
 
-      // sample fallback data if API unreachable
       function sampleData(){
         return [
           { sku:'SF0112', name:'รถเข็นไฟฟ้า (ตัวอย่าง)', quantity:60, cost:500, status:'พร้อมส่ง', imageUrl:'https://picsum.photos/id/1025/600/400', popular:false, description:'รถเข็นไฟฟ้าตัวอย่าง' },
@@ -304,7 +276,6 @@
         return r.json();
       }
 
-      // build card
       function makeCard(p){
         const art = document.createElement('article');
         art.className = 'product-card card';
@@ -373,7 +344,6 @@
       }
       function closeModal(){ const m = qs('#detailModal'); if(!m) return; m.classList.add('hidden'); m.setAttribute('aria-hidden','true'); }
 
-      // filters
       function populateFilters(items){
         const catSel = qs('#filterCategory');
         if(!catSel) return;
@@ -387,10 +357,9 @@
         if(cur) catSel.value = cur;
       }
 
-      // load products
       async function loadProducts(q){
         try{
-          spinner.show('โหลดสินค้ากำลังทำงาน...');
+          spinner.show('กำลังโหลดรายการสินค้า...');
           const res = await apiGet({ action:'list', limit: 500 });
           if(!res || !res.ok){ renderCards([]); qs('#catalogMsg').textContent = 'โหลดสินค้าล้มเหลว'; spinner.hide(); return; }
           const data = res.data || [];
@@ -406,7 +375,6 @@
         }
       }
 
-      // nav switching
       function showView(name){
         qsa('#viewCatalog,#viewHistory,#viewAdmin').forEach(el => el.style.display = 'none');
         if(name === 'catalog') qs('#viewCatalog').style.display = '';
@@ -414,9 +382,7 @@
         else if(name === 'admin') qs('#viewAdmin').style.display = '';
       }
 
-      // init
       function init(){
-        // nav buttons
         qsa('.nav-btn').forEach(btn => {
           btn.addEventListener('click', (ev) => {
             qsa('.nav-btn').forEach(x => x.classList.remove('active'));
@@ -424,14 +390,12 @@
             const view = ev.currentTarget.dataset.view;
             showView(view);
             if(view === 'catalog') loadProducts();
-            // for history/admin we show placeholders (you can expand)
           });
         });
 
         qs('#searchBtn').addEventListener('click', ()=> {
           const q = qs('#searchInput').value.trim();
           if(!q) return loadProducts();
-          // quick local filter: call loadProducts then filter
           loadProducts().then(()=> {
             const cards = Array.from(qs('#cards').children);
             cards.forEach(c => {
@@ -463,9 +427,14 @@
         qs('#detailModal').addEventListener('click', (e)=> { if(e.target === qs('#detailModal')) closeModal(); });
         document.addEventListener('keydown', (e)=> { if(e.key === 'Escape') closeModal(); });
 
-        // initial load
         loadProducts();
       }
+
+      // spinner helper reference inside init scope
+      const spinner = {
+        show(msg){ const g = qs('#globalSpinner'); if(!g) return; qs('#globalSpinnerText').textContent = msg || 'กำลังโหลด...'; g.classList.remove('hidden'); },
+        hide(){ const g = qs('#globalSpinner'); if(g) g.classList.add('hidden'); }
+      };
 
       document.addEventListener('DOMContentLoaded', init);
     })();
