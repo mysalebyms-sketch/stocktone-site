@@ -3,105 +3,80 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Catalog — StockTone</title>
+  <title>Catalog - StockTone</title>
+
+  <!-- ใช้ style.css ที่ผมส่งก่อนหน้า -->
   <link rel="stylesheet" href="style.css">
-  <script src="config.js"></script> <!-- ต้องมี APPS_SCRIPT_URL -->
+
+  <!-- config.js ต้องมีตัวแปร APPS_SCRIPT_URL -->
+  <script src="config.js"></script>
 </head>
 <body>
   <header class="site-header">
     <div class="container header-inner">
       <div class="brand">
-        <div class="brand-badge">🛍️</div>
-        <div>
-          <div class="site-title">StockTone</div>
-          <div class="site-sub">ระบบจัดการสินค้า — Catalog</div>
-        </div>
+        <div class="logo">StockTone</div>
+        <div class="sub">ระบบจัดการสินค้า — Catalog</div>
       </div>
 
-      <div class="header-actions">
-        <input id="searchInput" class="input" placeholder="ค้นหาสินค้า..." aria-label="ค้นหาสินค้า">
+      <div class="search-row">
+        <input id="searchInput" placeholder="ค้นหาสินค้า..." aria-label="ค้นหาสินค้า" />
         <button id="searchBtn" class="btn">ค้นหา</button>
       </div>
-    </div>
 
-    <nav class="nav-bar">
-      <div class="container nav-inner">
-        <button class="nav-btn active" data-target="catalog.html" id="navCatalog">Catalog</button>
-        <button class="nav-btn" data-target="history.html" id="navHistory">History</button>
-        <button class="nav-btn" data-target="admin.html" id="navAdmin">Admin</button>
-      </div>
-    </nav>
+      <nav class="page-switch" aria-label="หน้า">
+        <a href="catalog.html" class="active" id="navCatalog">Catalog</a>
+        <a href="history.html" id="navHistory">History</a>
+        <a href="admin.html" id="navAdmin">Admin</a>
+      </nav>
+    </div>
   </header>
 
-  <main class="container main-grid catalog-grid-wrap">
-    <aside class="filters card">
-      <div class="catalog-controls">
-        <div class="row" style="margin-bottom:10px">
-          <select id="filterCategory" class="select" aria-label="หมวดหมู่">
-            <option value="">หมวดหมู่ทั้งหมด</option>
-          </select>
-        </div>
-        <div class="row" style="margin-bottom:12px">
-          <select id="filterStatus" class="select" aria-label="สถานะ">
-            <option value="">สถานะทั้งหมด</option>
-            <option value="active">active</option>
-            <option value="พร้อมส่ง">พร้อมส่ง</option>
-            <option value="deleted">deleted</option>
-          </select>
-        </div>
-        <div class="row">
-          <button id="clearFilters" class="btn btn-ghost">ล้าง</button>
-        </div>
-      </div>
+  <main class="container main-grid" role="main">
+    <!-- Filters column (mobile: sits above content) -->
+    <aside class="filters-card" aria-label="ตัวกรอง">
+      <label for="filterCategory">หมวดหมู่</label>
+      <select id="filterCategory" class="select" aria-label="เลือกหมวดหมู่">
+        <option value="">หมวดหมู่ทั้งหมด</option>
+      </select>
+
+      <div style="height:12px"></div>
+
+      <label for="filterStatus">สถานะ</label>
+      <select id="filterStatus" class="select" aria-label="เลือกสถานะ">
+        <option value="">สถานะทั้งหมด</option>
+        <option value="active">active</option>
+        <option value="deleted">deleted</option>
+        <option value="พร้อมส่ง">พร้อมส่ง</option>
+      </select>
+
+      <div style="height:12px"></div>
+      <button id="clearFilters" class="btn btn-ghost">ล้าง</button>
     </aside>
 
-    <section class="catalog card" id="catalogSection" aria-live="polite">
+    <!-- Catalog area -->
+    <section class="catalog-card catalog-area" aria-labelledby="catalogHeading">
       <div class="catalog-top">
-        <div class="result-count" id="resultCount">กำลังโหลด...</div>
-        <div class="controls"></div>
+        <div class="result-count" id="catalogHeading">กำลังแสดงสินค้า</div>
+        <div class="muted small" id="catalogMsg"></div>
       </div>
 
-      <div id="spinnerOverlay" class="spinner-overlay hidden" aria-hidden="true">
-        <div class="spinner" role="status" aria-live="polite"></div>
-        <div class="spinner-text" id="spinnerStep">กำลังโหลด...</div>
+      <!-- spinnerOverlay: catalog.js will create if not present, but we include for clarity -->
+      <div id="spinnerOverlay" class="spinner-overlay hidden" style="display:none;">
+        <div class="spinner-dot" aria-hidden="true"></div>
+        <div class="muted small" id="spinnerStep">กำลังโหลด...</div>
       </div>
 
-      <div id="cards" class="catalog-grid"></div>
+      <!-- CARD GRID: สคริปต์จะ render ลงใน #cards -->
+      <div id="cards" class="cards-grid" role="list" aria-live="polite"></div>
 
-      <div id="catalogMsg" class="muted empty" style="padding:18px 0"></div>
+      <!-- empty / info -->
+      <div class="site-footer" style="margin-top:20px;">StockTone — catalog view</div>
     </section>
   </main>
 
-  <!-- detail modal placeholder -->
-  <div id="catalogDetailModal" class="modal hidden" aria-hidden="true">
-    <div class="modal-panel">
-      <button class="modal-close" aria-label="ปิด">✕</button>
-      <div class="detail-grid">
-        <div class="detail-image"><img src="" alt=""></div>
-        <div class="detail-info">
-          <h2 class="detail-title"></h2>
-          <div class="detail-price"></div>
-          <div class="detail-status muted small"></div>
-          <p class="detail-desc"></p>
-          <div class="detail-actions">
-            <button class="btn btn-primary add-cart">+ เพิ่มในตะกร้า</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <footer class="site-footer container">
-    <small>StockTone — catalog view</small>
-  </footer>
-
-  <!-- your catalog.js should exist and implement loadProducts / modal / spinner wiring -->
+  <!-- detail modal (catalog.js will create if needed) -->
+  <!-- scripts: config.js must be present and define APPS_SCRIPT_URL -->
   <script src="catalog.js"></script>
-  <script>
-    // small nav wiring to switch to different pages (simple redirect)
-    document.getElementById('navCatalog').addEventListener('click', ()=> location.href='catalog.html');
-    document.getElementById('navHistory').addEventListener('click', ()=> location.href='history.html');
-    document.getElementById('navAdmin').addEventListener('click', ()=> location.href='admin.html');
-  </script>
 </body>
 </html>
