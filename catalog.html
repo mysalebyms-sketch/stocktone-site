@@ -5,78 +5,166 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Catalog - StockTone</title>
 
-  <!-- ใช้ style.css ที่ผมส่งก่อนหน้า -->
-  <link rel="stylesheet" href="style.css">
+  <!-- ใช้ไฟล์ style.css ที่คุณอัพไว้ (เปลี่ยนถ้าจจริงใน repo ชื่ออื่น) -->
+  <link rel="stylesheet" href="sandbox:/mnt/data/style (1).css">
 
-  <!-- config.js ต้องมีตัวแปร APPS_SCRIPT_URL -->
-  <script src="config.js"></script>
+  <!-- placeholder config (catalog.js จะอ่าน APPS_SCRIPT_URL จาก config.js ถ้ามี) -->
+  <script>window.APP = window.APP || {};</script>
 </head>
-<body>
-  <header class="site-header">
+<body class="catalog-page">
+
+  <!-- Header / Nav -->
+  <header class="site-header" role="banner" aria-label="Top">
     <div class="container header-inner">
       <div class="brand">
-        <div class="logo">StockTone</div>
-        <div class="sub">ระบบจัดการสินค้า — Catalog</div>
+        <!-- inline SVG logo (small, friendly) -->
+        <svg width="36" height="36" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <defs><linearGradient id="g1" x1="0" x2="1"><stop offset="0" stop-color="#FFECB8"/><stop offset="1" stop-color="#FFD19A"/></linearGradient></defs>
+          <rect rx="6" width="24" height="24" fill="url(#g1)"></rect>
+          <path d="M6 9h12v2H6zM6 13h8v2H6z" fill="#9a6b1b" opacity="0.95"></path>
+        </svg>
+        <div>
+          <div class="site-title">StockTone</div>
+          <div class="site-sub muted">ระบบจัดการสินค้า — Catalog</div>
+        </div>
       </div>
 
-      <div class="search-row">
-        <input id="searchInput" placeholder="ค้นหาสินค้า..." aria-label="ค้นหาสินค้า" />
-        <button id="searchBtn" class="btn">ค้นหา</button>
-      </div>
+      <div class="header-actions" role="navigation" aria-label="Main navigation">
+        <input id="searchInput" class="input search-input" type="search" placeholder="ค้นหาสินค้า..." aria-label="ค้นหาสินค้า">
+        <button id="searchBtn" class="btn btn-accent">ค้นหา</button>
 
-      <nav class="page-switch" aria-label="หน้า">
-        <a href="catalog.html" class="active" id="navCatalog">Catalog</a>
-        <a href="history.html" id="navHistory">History</a>
-        <a href="admin.html" id="navAdmin">Admin</a>
-      </nav>
+        <nav class="top-nav" aria-label="switch-pages">
+          <button class="nav-pill active" data-page="catalog" aria-current="page">Catalog</button>
+          <button class="nav-pill" data-page="history">History</button>
+          <button class="nav-pill" data-page="admin">Admin</button>
+        </nav>
+      </div>
     </div>
   </header>
 
+  <!-- Main -->
   <main class="container main-grid" role="main">
-    <!-- Filters column (mobile: sits above content) -->
-    <aside class="filters-card" aria-label="ตัวกรอง">
-      <label for="filterCategory">หมวดหมู่</label>
-      <select id="filterCategory" class="select" aria-label="เลือกหมวดหมู่">
-        <option value="">หมวดหมู่ทั้งหมด</option>
-      </select>
 
-      <div style="height:12px"></div>
+    <!-- Filters column (collapsible on mobile) -->
+    <aside class="filters card" id="filtersColumn" aria-label="Filters">
+      <div class="filters-head">
+        <strong>ตัวกรอง</strong>
+        <button id="toggleFilters" class="btn-ghost" aria-expanded="true">ซ่อน</button>
+      </div>
 
-      <label for="filterStatus">สถานะ</label>
-      <select id="filterStatus" class="select" aria-label="เลือกสถานะ">
-        <option value="">สถานะทั้งหมด</option>
-        <option value="active">active</option>
-        <option value="deleted">deleted</option>
-        <option value="พร้อมส่ง">พร้อมส่ง</option>
-      </select>
+      <div class="filters-body">
+        <label for="filterCategory">หมวดหมู่</label>
+        <select id="filterCategory" class="select">
+          <option value="">หมวดหมู่ทั้งหมด</option>
+        </select>
 
-      <div style="height:12px"></div>
-      <button id="clearFilters" class="btn btn-ghost">ล้าง</button>
+        <label for="filterStatus" style="margin-top:12px;">สถานะ</label>
+        <select id="filterStatus" class="select">
+          <option value="">สถานะทั้งหมด</option>
+          <option value="active">active</option>
+          <option value="พร้อมส่ง">พร้อมส่ง</option>
+          <option value="deleted">deleted</option>
+        </select>
+
+        <div style="margin-top:12px;">
+          <button id="clearFilters" class="btn-outline">ล้าง</button>
+        </div>
+      </div>
     </aside>
 
     <!-- Catalog area -->
-    <section class="catalog-card catalog-area" aria-labelledby="catalogHeading">
+    <section class="catalog-area">
+      <!-- top controls -->
       <div class="catalog-top">
-        <div class="result-count" id="catalogHeading">กำลังแสดงสินค้า</div>
-        <div class="muted small" id="catalogMsg"></div>
+        <div class="result-count" id="resultCount">กำลังโหลด...</div>
+        <div class="catalog-actions">
+          <label class="small muted">เรียง: </label>
+          <select id="sortSelect" class="select">
+            <option value="relevance">ความเกี่ยวข้อง</option>
+            <option value="price_asc">ราคาต่ำ → สูง</option>
+            <option value="price_desc">ราคาสูง → ต่ำ</option>
+          </select>
+
+          <button id="viewGrid" class="btn-sm btn-outline" title="Grid view">Grid</button>
+          <button id="viewList" class="btn-sm btn-outline" title="List view">List</button>
+        </div>
       </div>
 
-      <!-- spinnerOverlay: catalog.js will create if not present, but we include for clarity -->
-      <div id="spinnerOverlay" class="spinner-overlay hidden" style="display:none;">
-        <div class="spinner-dot" aria-hidden="true"></div>
-        <div class="muted small" id="spinnerStep">กำลังโหลด...</div>
+      <!-- Spinner overlay (โปร่ง) -->
+      <div id="spinnerOverlay" class="spinner-overlay hidden" role="status" aria-live="polite" aria-hidden="true">
+        <div class="spinner-box">
+          <div class="lds-dual-ring" aria-hidden="true"></div>
+          <div id="spinnerStep" class="spinner-text">กำลังโหลดรายการสินค้า...</div>
+        </div>
       </div>
 
-      <!-- CARD GRID: สคริปต์จะ render ลงใน #cards -->
-      <div id="cards" class="cards-grid" role="list" aria-live="polite"></div>
+      <!-- Cards grid -->
+      <div id="cards" class="catalog-grid" aria-live="polite" aria-busy="true">
+        <!-- cards injected here by catalog.js -->
+      </div>
 
-      <!-- empty / info -->
-      <div class="site-footer" style="margin-top:20px;">StockTone — catalog view</div>
+      <!-- pagination -->
+      <div id="pagination" class="load-more-wrap" style="margin-top:18px; text-align:center;">
+        <button id="prevPage" class="btn-outline btn-sm" disabled>ย้อนกลับ</button>
+        <span id="pageInfo" class="muted" style="margin:0 12px;">หน้า 1</span>
+        <button id="nextPage" class="btn btn-sm btn-accent">ถัดไป</button>
+      </div>
+
+      <div id="catalogMsg" class="muted empty" style="padding:18px 0; display:none;"></div>
     </section>
+
   </main>
 
-  <!-- detail modal (catalog.js will create if needed) -->
-  <!-- scripts: config.js must be present and define APPS_SCRIPT_URL -->
-  <script src="catalog.js"></script>
+  <!-- Footer -->
+  <footer class="site-footer container">
+    <small>StockTone — catalog view</small>
+  </footer>
+
+  <!-- Modal placeholder (catalog.js จะเติมข้อมูล/เปิด-ปิด) -->
+  <div id="detailModal" class="modal hidden" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-panel">
+      <button class="modal-close" aria-label="ปิด">&times;</button>
+      <div class="modal-body detail-grid">
+        <div class="detail-image"><img src="" alt="" loading="lazy"></div>
+        <div class="detail-info">
+          <h2 class="detail-title"></h2>
+          <div class="detail-price"></div>
+          <div class="detail-status muted"></div>
+          <p class="detail-desc muted"></p>
+          <div class="detail-actions">
+            <button class="btn btn-accent modal-close">ปิด</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- catalog.js will be added next -->
+  <script>
+    // small UX: toggle filter panel on mobile
+    (function(){
+      const filters = document.getElementById('filtersColumn');
+      const btn = document.getElementById('toggleFilters');
+      if(!btn || !filters) return;
+      btn.addEventListener('click', ()=> {
+        const hidden = filters.classList.toggle('collapsed');
+        btn.textContent = hidden ? 'แสดง' : 'ซ่อน';
+        btn.setAttribute('aria-expanded', !hidden);
+      });
+
+      // nav pills: basic page switch (client-side)
+      document.querySelectorAll('.nav-pill').forEach(p=>{
+        p.addEventListener('click', (e)=>{
+          document.querySelectorAll('.nav-pill').forEach(x=>x.classList.remove('active'));
+          p.classList.add('active');
+          // basic behavior: only visual; actual page switching handled by app router if needed
+        });
+      });
+
+      // ensure spinner overlay hidden if left by previous scripts
+      const spinner = document.getElementById('spinnerOverlay');
+      if(spinner) spinner.classList.add('hidden');
+    })();
+  </script>
 </body>
 </html>
