@@ -1,47 +1,61 @@
-// catalog.js - สร้าง catalog จาก API, จัดการ spinner, modal, responsive cards
-// ใช้ร่วมกับ config.js ที่ประกาศ APPS_SCRIPT_URL
+// catalog.js
+// Mobile-first catalog UI. Expects config.js to set APPS_SCRIPT_URL.
+// Replaces previous catalog.js. Copy & paste entire file.
 
 (() => {
   const PLACEHOLDER = 'data:image/svg+xml;utf8,' + encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480">
-      <rect width="100%" height="100%" fill="#f4f4f4"/>
-      <g fill="#ddd"><rect x="40" y="40" width="200" height="120" rx="8"/></g>
-    </svg>`
+    `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480"><rect width="100%" height="100%" fill="#fff7ee"/><g fill="#f3f3f3"><rect x="24" y="24" width="752" height="432" rx="8"/></g></svg>`
   );
 
-  // helpers
-  function $q(s, root=document){ return root.querySelector(s); }
-  function $qa(s, root=document){ return Array.from((root||document).querySelectorAll(s)); }
+  // DOM helpers
+  const $ = (s, root=document) => root.querySelector(s);
+  const $$ = (s, root=document) => Array.from(root.querySelectorAll(s));
 
-  // spinner helpers (expects #spinnerOverlay in DOM or #globalSpinnerOverlay)
+  // spinner helpers (uses #spinnerOverlay element injected by script)
   const spinner = {
+    el: null,
+    stepEl: null,
+    ensure(){
+      if(this.el) return;
+      // try to reuse existing node in page
+      this.el = document.getElementById('spinnerOverlay');
+      if(!this.el){
+        this.el = document.createElement('div');
+        this.el.id = 'spinnerOverlay';
+        this.el.className = 'spinner-overlay';
+        this.el.innerHTML = `<div class="spinner-dot" aria-hidden="true"></div><div class="muted small" id="spinnerStep">กำลังโหลด...</div>`;
+        // insert at top of catalog area if exists, else body
+        const container = document.querySelector('.catalog-area') || document.body;
+        container.insertBefore(this.el, container.firstChild);
+      }
+      this.stepEl = this.el.querySelector('#spinnerStep');
+    },
     show(msg){
-      const el = $q('#spinnerOverlay') || $q('#globalSpinnerOverlay');
-      if(!el) return;
-      const step = $q('#spinnerStep') || el.querySelector('.spinner-text') || $q('#spinnerTitle');
-      if(step) step.textContent = msg || 'กำลังโหลด...';
-      el.classList.remove('hidden');
+      this.ensure();
+      this.stepEl.textContent = msg || 'กำลังโหลด...';
+      this.el.style.display = 'flex';
     },
     hide(){
-      const el = $q('#spinnerOverlay') || $q('#globalSpinnerOverlay');
-      if(!el) return;
-      el.classList.add('hidden');
+      this.ensure();
+      this.el.style.display = 'none';
     }
   };
 
-  function toast(text, ms=2500){
-    let t = $q('#_ct_toast');
+  // small toast
+  function toast(text, ms=2200){
+    let t = document.getElementById('_ct_toast');
     if(!t){
-      t = document.createElement('div'); t.id='_ct_toast'; t.className='toast';
+      t = document.createElement('div'); t.id = '_ct_toast'; t.className = 'toast';
+      Object.assign(t.style, { position:'fixed', right:'18px', bottom:'18px', padding:'10px 14px', background:'#111827', color:'#fff', borderRadius:'8px', zIndex:99999, opacity:0, transition:'all .18s ease' });
       document.body.appendChild(t);
     }
     t.textContent = text;
-    t.classList.add('show');
+    t.style.opacity = '1';
     clearTimeout(t._timer);
-    t._timer = setTimeout(()=> t.classList.remove('show'), ms);
+    t._timer = setTimeout(()=> t.style.opacity = '0', ms);
   }
 
-  // api
+  // API GET (uses APPS_SCRIPT_URL from config.js)
   async function apiGet(params){
     const base = (typeof APPS_SCRIPT_URL === 'undefined') ? '' : APPS_SCRIPT_URL;
     const url = base + '?' + new URLSearchParams(params).toString();
@@ -49,65 +63,65 @@
     return r.json();
   }
 
-  // Create a single product card element
+  // Render one product card (catalog view - no +/−)
   function makeCard(p){
-    const card = document.createElement('article');
-    card.className = 'product-card card';
+    const article = document.createElement('article');
+    article.className = 'product-card';
 
-    // image wrapper
+    // thumb
     const thumb = document.createElement('div'); thumb.className = 'thumb';
     const img = document.createElement('img');
     img.alt = p.name || '';
-    img.loading = 'lazy';
-    img.onerror = ()=> { img.src = PLACEHOLDER; img.dataset.bad = '1'; };
     img.src = p.imageUrl || PLACEHOLDER;
+    img.onerror = ()=> img.src = PLACEHOLDER;
     thumb.appendChild(img);
-    card.appendChild(thumb);
+    article.appendChild(thumb);
 
     // body
-    const body = document.createElement('div'); body.className = 'card-body product-body';
-    const title = document.createElement('h3'); title.className = 'product-title';
-    // add small emoji prefix for friendly tone
-    title.innerHTML = `<span class="prod-emoji" aria-hidden>🛍️</span> ${escapeHtml(p.name || '(no name)')}`;
-    body.appendChild(title);
+    const body = document.createElement('div'); body.className = 'card-body';
+    const titleRow = document.createElement('div'); titleRow.className = 'prod-title';
+    // svg bag icon
+    const svgBag = document.createElement('span'); svgBag.className = 'icon-bag';
+    svgBag.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 7V6a6 6 0 0112 0v1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /><rect x="3" y="7" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>`;
+    titleRow.appendChild(svgBag);
+    const h = document.createElement('div'); h.textContent = p.name || '(no name)';
+    h.style.marginLeft = '8px';
+    titleRow.appendChild(h);
+    body.appendChild(titleRow);
 
     // price
-    const price = document.createElement('div'); price.className = 'product-price card-price';
-    price.textContent = p.cost ? `${p.cost} บาท` : '-';
+    const price = document.createElement('div'); price.className = 'prod-price'; price.textContent = p.cost ? `${p.cost} บาท` : '-';
     body.appendChild(price);
 
-    // status + qty
-    const metaWrap = document.createElement('div'); metaWrap.className = 'prod-meta';
-    const status = document.createElement('div'); status.className = 'muted small'; status.textContent = 'สถานะ: ' + (p.status || '-');
-    const qty = document.createElement('div'); qty.className = 'muted small'; qty.textContent = 'คงเหลือ: ' + (Number(p.quantity) || 0);
-    metaWrap.appendChild(status); metaWrap.appendChild(qty);
-    body.appendChild(metaWrap);
+    // meta (status / qty)
+    const meta = document.createElement('div'); meta.className = 'prod-meta';
+    const status = document.createElement('div'); status.textContent = `สถานะ: ${p.status || '-'}`; meta.appendChild(status);
+    const remain = document.createElement('div'); remain.textContent = `คงเหลือ: ${Number(p.quantity)||0}`; remain.style.marginTop='6px'; meta.appendChild(remain);
+    body.appendChild(meta);
 
-    // footer actions: only "ดูรายละเอียด" (no + / - controls as requested)
+    article.appendChild(body);
+
+    // footer
     const foot = document.createElement('div'); foot.className = 'card-foot';
-    const btnDetail = document.createElement('button'); btnDetail.className = 'btn-primary btn-detail'; btnDetail.textContent = 'ดูรายละเอียด';
-    btnDetail.addEventListener('click', ()=> openDetail(p));
-    foot.appendChild(btnDetail);
-    body.appendChild(foot);
+    const btn = document.createElement('button'); btn.className = 'btn-detail'; btn.textContent = 'ดูรายละเอียด';
+    btn.addEventListener('click', ()=> openDetailModal(p));
+    foot.appendChild(btn);
 
-    card.appendChild(body);
-    card.tabIndex = 0;
-    return card;
+    const statusBadge = document.createElement('div'); statusBadge.className = 'badge-status'; statusBadge.textContent = (p.status || '').toLowerCase() === 'active' ? 'พร้อมขาย' : (p.status || '-');
+    foot.appendChild(statusBadge);
+
+    article.appendChild(foot);
+
+    return article;
   }
 
-  // escape helper for HTML injection (very small)
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-  }
-
-  // render list into #cards
+  // render cards list
   function renderCards(list){
-    const container = $q('#cards');
+    const container = document.getElementById('cards');
     if(!container) return;
     container.innerHTML = '';
     if(!list || list.length === 0){
-      const empty = document.createElement('div'); empty.className='empty-state'; empty.textContent='ไม่มีสินค้า';
-      container.appendChild(empty);
+      container.appendChild(emptyState('ไม่มีสินค้า'));
       return;
     }
     const frag = document.createDocumentFragment();
@@ -115,45 +129,51 @@
     container.appendChild(frag);
   }
 
-  // detail modal (re-usable)
+  function emptyState(text){
+    const d = document.createElement('div'); d.className = 'empty-state'; d.textContent = text || '-';
+    return d;
+  }
+
+  // DETAIL modal: create once + close on overlay or close button
   function createDetailModal(){
-    if($q('#catalogDetailModal')) return $q('#catalogDetailModal');
+    if(document.getElementById('catalogDetailModal')) return document.getElementById('catalogDetailModal');
     const wrap = document.createElement('div'); wrap.id='catalogDetailModal'; wrap.className='modal hidden';
     wrap.innerHTML = `
       <div class="modal-panel">
         <button class="modal-close" aria-label="close">&times;</button>
-        <div class="modal-body detail-grid">
-          <div class="detail-image"><img src="" alt=""></div>
+        <div class="detail-body">
+          <div class="detail-image" style="margin-bottom:12px"><img src="" alt=""></div>
           <div class="detail-info">
-            <h2></h2>
-            <div class="detail-price"></div>
-            <div class="detail-status muted small"></div>
-            <p class="detail-desc"></p>
-            <div class="detail-actions">
-              <button class="btn btn-primary add-cart">+ เพิ่มลงตะกร้า</button>
-            </div>
+            <h2 class="muted" style="margin:4px 0 8px 0"></h2>
+            <div class="prod-price" style="margin-bottom:8px"></div>
+            <div class="prod-meta small" style="margin-bottom:12px"></div>
+            <p class="detail-desc small muted"></p>
           </div>
         </div>
       </div>
     `;
     document.body.appendChild(wrap);
+    const panel = wrap.querySelector('.modal-panel');
+    // close button
     wrap.querySelector('.modal-close').addEventListener('click', ()=> wrap.classList.add('hidden'));
+    // click outside to close
+    wrap.addEventListener('click', (ev)=> { if(ev.target === wrap) wrap.classList.add('hidden'); });
     return wrap;
   }
-  function openDetail(p){
+  function openDetailModal(p){
     const modal = createDetailModal();
     modal.classList.remove('hidden');
     modal.querySelector('.detail-image img').src = p.imageUrl || PLACEHOLDER;
     modal.querySelector('.detail-info h2').textContent = p.name || '';
-    modal.querySelector('.detail-price').textContent = p.cost ? `${p.cost} บาท` : '-';
-    modal.querySelector('.detail-status').textContent = 'สถานะ: ' + (p.status || '-');
+    modal.querySelector('.prod-price').textContent = p.cost ? `${p.cost} บาท` : '-';
+    modal.querySelector('.prod-meta').textContent = `สถานะ: ${p.status || '-'} • คงเหลือ: ${Number(p.quantity)||0}`;
     modal.querySelector('.detail-desc').textContent = p.description || '';
   }
 
-  // populate filters (category)
+  // load categories (client-side)
   function populateFilters(items){
-    const catSel = $q('#filterCategory');
-    if(!catSel) return;
+    const catSel = document.getElementById('filterCategory');
+    if(!catSel || !items) return;
     const cats = new Set();
     items.forEach(i => { if(i.category) cats.add(i.category); });
     catSel.innerHTML = '<option value="">หมวดหมู่ทั้งหมด</option>';
@@ -162,10 +182,10 @@
     });
   }
 
-  // load products with spinner
+  // load products (API)
   async function loadProducts(q){
     try{
-      spinner.show('โหลดรายการสินค้า...');
+      spinner.show('กำลังโหลดสินค้า...');
       const params = { action:'list', limit: 500 };
       if(q) params.q = q;
       const res = await apiGet(params);
@@ -173,7 +193,13 @@
       const data = res.data || [];
       data.forEach(d => { d.quantity = Number(d.quantity)||0; d.cost = Number(d.cost)||0; });
       populateFilters(data);
-      renderCards(data);
+      // optional: client-side filter by status or category if set
+      const cat = document.getElementById('filterCategory') && document.getElementById('filterCategory').value;
+      const st = document.getElementById('filterStatus') && document.getElementById('filterStatus').value;
+      let list = data;
+      if(cat) list = list.filter(x => (x.category||'')===cat);
+      if(st) list = list.filter(x => (x.status||'')===st);
+      renderCards(list);
       spinner.hide();
     }catch(err){
       console.error(err);
@@ -182,18 +208,27 @@
     }
   }
 
-  // initialization and UI wiring
+  // init UI wiring
   function init(){
-    // Remove any static sample product-card nodes that were accidentally copied into HTML
-    $qa('.product-card').forEach((el)=> {
+    // ensure #cards exists (if catalog.html missing, create)
+    let cards = document.getElementById('cards');
+    const catalogArea = document.querySelector('.catalog-area') || document.body;
+    if(!cards){
+      cards = document.createElement('div'); cards.id='cards'; cards.className='cards-grid';
+      catalogArea.appendChild(cards);
+    }
+
+    // remove any leftover static sample product-card nodes not inside #cards
+    $$('.product-card').forEach(el => {
       if(!el.closest('#cards')) el.remove();
     });
 
-    const searchInput = $q('#searchInput');
-    const searchBtn = $q('#searchBtn');
-    const clearBtn = $q('#clearFilters');
-    const catSel = $q('#filterCategory');
-    const statusSel = $q('#filterStatus');
+    // wire up search/filter
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const clearBtn = document.getElementById('clearFilters');
+    const catSel = document.getElementById('filterCategory');
+    const statusSel = document.getElementById('filterStatus');
 
     if(searchBtn) searchBtn.addEventListener('click', ()=> loadProducts(searchInput && searchInput.value));
     if(searchInput) searchInput.addEventListener('keydown', (e)=> { if(e.key === 'Enter') loadProducts(searchInput.value); });
@@ -203,9 +238,13 @@
       if(statusSel) statusSel.value='';
       loadProducts();
     });
+    if(catSel) catSel.addEventListener('change', ()=> loadProducts(searchInput && searchInput.value));
+    if(statusSel) statusSel.addEventListener('change', ()=> loadProducts(searchInput && searchInput.value));
 
+    // initial load
     loadProducts();
   }
 
+  // DOM ready
   document.addEventListener('DOMContentLoaded', init);
 })();
