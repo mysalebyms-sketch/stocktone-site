@@ -4,159 +4,197 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>ล้อพาณิชย์ — Catalog</title>
+  <meta name="description" content="ล้อพาณิชย์ - ดูจำนวนสินค้าได้ด้านล่าง" />
 
   <style>
-  /* =========================
-     COMPLETE STYLE for catalog.html
-     Mobile-first, pastel yellow-orange theme
-     ========================= */
+    /* =====================
+       Single-file style — warm pastel (yellow-orange)
+       ===================== */
+    :root{
+      --bg: #fff8f3;
+      --card: #ffffff;
+      --accent: #ffb34d;
+      --accent-2: #ff9f1c;
+      --muted: #6b7280;
+      --radius: 14px;
+      --shadow-sm: 0 6px 18px rgba(16,24,40,0.06);
+      --container: 20px;
+      --text: #0f172a;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+      margin:0;
+      background: linear-gradient(180deg, #fff8f3 0%, #fff5ec 100%);
+      color:var(--text);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
 
-  :root{
-    --bg: #fff7f0;
-    --card: #ffffff;
-    --accent: #f6a623;
-    --accent-2: #ffd9a6;
-    --muted: #6b7280;
-    --shadow: 0 10px 30px rgba(18,24,40,0.06);
-    --radius: 14px;
-    --container: 1100px;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0;
-    font-family: Inter, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    -webkit-font-smoothing:antialiased;
-    background: linear-gradient(180deg,#fffaf4 0%, #fff6ee 60%);
-    color:#111827;
-  }
-  .container{max-width:var(--container);margin:0 auto;padding:18px}
+    /* container */
+    .container{max-width:1100px;margin:0 auto;padding:18px}
 
-  /* TOPBAR */
-  .topbar{padding:12px 0 8px; position:sticky; top:0; background:transparent; z-index:50}
-  .topbar-inner{display:flex;align-items:center;justify-content:space-between;gap:12px}
-  .brand{display:flex;gap:12px;align-items:center}
-  .brand-ic{font-size:28px}
-  .title{font-size:20px;margin:0;font-weight:800}
-  .subtitle{font-size:13px;color:var(--muted); margin-top:2px}
+    /* header (sticky) */
+    .site-header{
+      position:sticky;
+      top:0;
+      z-index:50;
+      background:transparent;
+      backdrop-filter: blur(6px);
+      padding:12px 0;
+    }
+    .header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 18px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .brand-logo-wrap{
+      width:54px; height:54px; border-radius:12px; background:linear-gradient(180deg,var(--accent),var(--accent-2));
+      display:flex;align-items:center;justify-content:center; box-shadow:0 6px 18px rgba(255,160,60,0.12);
+      flex-shrink:0;
+    }
+    .brand-logo{width:34px;height:34px}
+    .brand-texts{display:flex;flex-direction:column;gap:2px}
+    .brand-title{font-size:20px;font-weight:800;color:#112;letter-spacing:0.2px}
+    .brand-sub{font-size:13px;color:var(--muted)}
 
-  /* navigation buttons (prominent) */
-  .nav-mini{display:flex;gap:8px}
-  .nav-btn{
-    padding:8px 12px;border-radius:10px;border:0;background:transparent;color:var(--muted);cursor:pointer;
-    font-weight:600;box-shadow:0 2px 8px rgba(2,6,23,0.04);
-  }
-  .nav-btn.active{
-    background:linear-gradient(90deg,var(--accent),#ffb66a);color:#fff; box-shadow:0 8px 24px rgba(246,166,35,0.14);
-  }
+    /* NAV under brand */
+    .top-nav{display:flex;gap:10px;align-items:center}
+    .nav-btn{
+      background:transparent;border:0;padding:8px 14px;border-radius:999px;
+      box-shadow:none;cursor:pointer;font-weight:700;color:var(--muted);transition:all .15s;
+    }
+    .nav-btn.active{
+      background:linear-gradient(90deg,var(--accent),var(--accent-2));
+      color:#fff; box-shadow:0 8px 20px rgba(255,160,60,0.12);
+    }
 
-  /* layout */
-  .layout{display:grid;grid-template-columns: 1fr;gap:18px;align-items:start}
-  @media(min-width:900px){ .layout{grid-template-columns: 240px 1fr} }
+    /* ensure main content starts below header (avoid overlapping) */
+    .main-content{padding-top:10px; margin-top:8px}
 
-  /* filters column */
-  .filters{
-    background:linear-gradient(180deg,#fff,#fffaf6);
-    padding:14px;border-radius:var(--radius);box-shadow:var(--shadow);
-  }
-  .filters label{display:block;margin-bottom:10px;font-size:14px;color:#222}
-  .filters select, .filters input[type="search"]{
-    width:100%;padding:10px;border-radius:10px;border:1px solid #efe9e4;background:#fff;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,0.6);
-  }
-  .filters .controls{display:flex;gap:8px;margin-top:10px}
-  .filters .controls .btn{flex:1}
+    /* filter card */
+    .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:16px;margin-bottom:18px}
+    .filter-card{max-width:720px;margin:10px auto}
+    .filter-title{margin:0 0 8px 0;font-weight:700}
+    label{display:block;margin:8px 0;font-size:14px}
+    select,input[type="search"]{
+      width:100%;padding:12px;border-radius:10px;border:1px solid #f1e9e3;background:#fff
+    }
+    .search-row{display:flex;gap:10px;margin-top:8px}
+    .btn{border:0;padding:10px 14px;border-radius:12px;cursor:pointer}
+    .btn-primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#fff;font-weight:700}
+    .btn-ghost{background:transparent;border:1px solid rgba(0,0,0,0.04);color:var(--accent);font-weight:700}
 
-  /* search moved into filters area for mobile UX */
-  .search-inline{margin-top:10px;display:flex;gap:8px}
+    /* result header */
+    .result-header{max-width:1100px;margin:10px auto 0;padding-left:6px}
+    .result-header h4{margin:8px 0;font-size:18px}
 
-  /* catalog header */
-  .catalog-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-  .result-count{font-weight:700;color:#333}
+    /* cards grid */
+    .cards-grid{
+      display:grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap:18px;
+      align-items:start;
+    }
+    @media(min-width:900px){ .cards-grid{ grid-template-columns: repeat(3,1fr); } }
+    @media(max-width:480px){ .cards-grid{ grid-template-columns: 1fr 1fr } }
 
-  /* cards grid */
-  .cards-grid{display:grid;grid-template-columns: repeat(2,1fr); gap:18px}
-  @media(min-width:900px){ .cards-grid{grid-template-columns: repeat(3,1fr)} }
-  @media(min-width:1200px){ .cards-grid{grid-template-columns: repeat(4,1fr)} }
+    /* product card */
+    .product-card{
+      background:var(--card);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;
+      transition:transform .18s ease;
+    }
+    .product-card:hover{ transform: translateY(-6px); }
+    .thumb{height:200px;display:flex;align-items:center;justify-content:center;background:#fff;border-bottom:1px solid #fbf2ea;padding:6px}
+    .thumb img{width:100%;height:100%;object-fit:cover;border-radius:8px}
+    .card-body{padding:14px;display:flex;flex-direction:column;gap:8px;flex:1}
+    .title-row{display:flex;align-items:center;gap:8px}
+    .badge{display:inline-flex;align-items:center;justify-content:center;padding:8px 10px;border-radius:40px;font-weight:700;background:rgba(255,179,77,0.08);color:var(--accent-2);font-size:12px}
+    .badge-ready{background:linear-gradient(90deg,#e6f7eb,#fff);color:#2b8b4a;border:1px solid rgba(42,160,82,0.06)}
+    .product-title{font-weight:800;font-size:16px}
+    .product-price{font-weight:800;color:var(--accent-2);font-size:18px;margin-top:6px}
+    .muted.small{color:var(--muted);font-size:13px}
 
-  /* card */
-  .product-card, .card{
-    background:var(--card);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);
-    display:flex;flex-direction:column;transition:transform .18s ease, box-shadow .18s ease;
-    border:1px solid rgba(12,16,20,0.02);
-  }
-  .product-card:hover, .card:hover{ transform:translateY(-6px); box-shadow:0 20px 50px rgba(2,6,23,0.08); }
+    /* detail button */
+    .btn-detail{margin-top:auto;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.04);background:#fff;font-weight:700;color:var(--accent-2)}
+    .card-foot{display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:8px}
 
-  /* image */
-  .thumb{height:180px;display:flex;align-items:center;justify-content:center;background:#fff7f0}
-  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+    /* modal */
+    .modal{position:fixed;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.36);z-index:2000}
+    .modal.hidden{display:none}
+    .modal-panel{width:92%;max-width:900px;background:var(--card);border-radius:12px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,0.12);position:relative}
+    .modal-close{position:absolute;right:18px;top:12px;background:transparent;border:0;font-size:22px;cursor:pointer}
+    .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .detail-image img{width:100%;height:auto;border-radius:8px}
+    .detail-info h2{margin:0 0 6px 0}
 
-  /* body */
-  .card-body{padding:12px 14px;flex:1;display:flex;flex-direction:column;gap:8px}
-  .title-row{display:flex;gap:10px;align-items:center}
-  .badge{display:inline-block;padding:6px 8px;border-radius:999px;font-size:12px;background:linear-gradient(90deg,#fff7eb,#fff1d9);color:var(--accent);border:1px solid rgba(246,166,35,0.12)}
-  .product-title{font-weight:700}
-  .product-price{font-weight:800;color:#ff7a00;font-size:18px;margin-top:4px}
-  .muted.small{font-size:13px;color:var(--muted)}
+    /* global spinner */
+    .global-spinner{position:fixed;left:0;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;z-index:3000}
+    .global-spinner.hidden{display:none}
+    .loading-panel{display:flex;align-items:center;gap:12px;background:#fff;padding:12px 16px;border-radius:12px;box-shadow:0 8px 30px rgba(2,6,23,0.12)}
+    .loading-spinner{width:18px;height:18px;border-radius:50%;border:3px solid rgba(0,0,0,0.06);border-top-color:var(--accent-2);animation:spin .9s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
 
-  /* card footer */
-  .card-foot{display:flex;align-items:center;justify-content:space-between;padding:10px;border-top:1px dashed rgba(0,0,0,0.03)}
-  .btn-outline{background:#fff;border:1px solid rgba(0,0,0,0.06);padding:8px 12px;border-radius:10px;color:var(--accent);cursor:pointer}
-  .btn-primary{background:var(--accent);color:#fff;border-radius:10px;padding:8px 12px;border:0;cursor:pointer}
+    /* empty state */
+    .empty-state{text-align:center;color:var(--muted);padding:28px}
 
-  /* modal */
-  .modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,0.45);z-index:9999}
-  .modal.hidden{display:none}
-  .modal-panel{width:94%;max-width:920px;background:white;border-radius:12px;padding:16px;box-shadow:0 18px 48px rgba(2,6,23,0.2)}
-  .modal-body{display:grid;grid-template-columns:1fr;gap:12px}
-  @media(min-width:700px){ .modal-body{grid-template-columns:380px 1fr} }
-  .modal-image img{width:100%;height:100%;object-fit:cover;border-radius:10px}
-  .modal-close{position:absolute;right:14px;top:10px;background:transparent;border:0;font-size:22px;cursor:pointer;color:var(--muted)}
+    /* small responsive tweaks */
+    @media(max-width:520px){
+      .header-inner{padding:10px}
+      .brand-title{font-size:18px}
+      .brand-sub{font-size:12px}
+      .cards-grid{grid-template-columns:1fr}
+      .thumb{height:180px}
+      .filter-card{padding:12px}
+      .search-row{flex-direction:row}
+    }
 
-  /* spinner */
-  .spinner-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:9998}
-  .spinner-overlay.hidden{display:none}
-  .spinner-panel{display:flex;gap:12px;align-items:center;background:rgba(255,255,255,0.95);padding:12px;border-radius:12px;box-shadow:0 12px 30px rgba(2,6,23,0.12)}
-  .lds-dual-ring{display:inline-block;width:40px;height:40px}
-  .lds-dual-ring:after{content:" ";display:block;width:28px;height:28px;margin:4px;border-radius:50%;border:4px solid var(--accent);border-color:var(--accent) transparent var(--accent) transparent;animation:lds-dual-ring 1.2s linear infinite}
-  @keyframes lds-dual-ring{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+    /* fix: ensure main has top padding equal to header to avoid overlap while scrolling */
+    main.main-content{ padding-top:18px; margin-bottom:56px; }
 
-  /* utilities */
-  .hidden{display:none !important}
-  .muted{color:var(--muted)}
-  .empty-state{text-align:center;padding:20px;color:var(--muted)}
+    /* small polish: result count style */
+    .result-header h4{color:var(--text); margin-left:4px}
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="topbar-inner container">
+  <!-- HEADER / BRAND -->
+  <header class="site-header" role="banner">
+    <div class="header-inner container">
       <div class="brand">
-        <div class="brand-ic" aria-hidden="true">🛞</div>
-        <div>
-          <h1 class="title">ล้อพาณิชย์</h1>
-          <div class="subtitle">ดูจำนวนสินค้าได้ด้านล่าง</div>
+        <div class="brand-logo-wrap" aria-hidden="true">
+          <!-- SVG shop-box icon -->
+          <svg class="brand-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="6" width="20" height="12" rx="2" fill="white" opacity="0.04"/>
+            <path d="M3 7h18v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7z" fill="#FFD9A6"/>
+            <path d="M12 2L2 7v11a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V7L12 2z" fill="#FFB34D"/>
+            <path d="M9 11h6v6H9z" fill="#fff" opacity="0.08"/>
+          </svg>
+        </div>
+        <div class="brand-texts">
+          <div class="brand-title">ล้อพาณิชย์</div>
+          <div class="brand-sub">ดูจำนวนสินค้าได้ที่ด้านล่าง</div>
         </div>
       </div>
 
-      <nav class="nav-mini" aria-label="เมนูหลัก">
-        <button class="nav-btn active" data-view="catalog">Catalog</button>
-        <button class="nav-btn" data-view="history">History</button>
-        <button class="nav-btn" data-view="admin">Admin</button>
+      <nav class="top-nav" role="navigation" aria-label="main nav">
+        <button class="nav-btn active" data-view="catalog">หน้าร้าน</button>
+        <button class="nav-btn" data-view="history">ประวัติ</button>
+        <button class="nav-btn" data-view="admin">ผู้ดูแล</button>
       </nav>
     </div>
   </header>
 
-  <main class="container layout" role="main">
-    <aside class="filters" aria-labelledby="filterHeading">
-      <div id="filterHeading" style="font-weight:700;margin-bottom:8px">ตัวกรอง</div>
+  <!-- MAIN -->
+  <main class="container main-content" id="mainContent" role="main">
+    <!-- Filter card -->
+    <section class="filter-card card" id="viewCatalog">
+      <h3 class="filter-title">ตัวกรอง</h3>
 
-      <label>
-        หมวดหมู่
-        <select id="filterCategory"><option value="">หมวดหมู่ทั้งหมด</option></select>
+      <label>หมวดหมู่
+        <select id="filterCategory">
+          <option value="">หมวดหมู่ทั้งหมด</option>
+        </select>
       </label>
 
-      <label>
-        สถานะ
+      <label>สถานะ
         <select id="filterStatus">
           <option value="">สถานะทั้งหมด</option>
           <option value="active">active</option>
@@ -165,273 +203,272 @@
         </select>
       </label>
 
-      <!-- search moved here as requested -->
-      <div class="search-inline" style="margin-top:10px">
-        <input id="searchInput" type="search" placeholder="ค้นหาสินค้า..." aria-label="ค้นหาสินค้า" />
-        <button id="searchBtn" class="btn-primary">ค้นหา</button>
+      <div class="search-row" style="margin-top:10px;">
+        <input id="searchInput" type="search" placeholder="ค้นหาสินค้า..." />
+        <button id="searchBtn" class="btn btn-primary">ค้นหา</button>
       </div>
 
-      <div class="controls" style="margin-top:12px">
-        <button id="clearFilters" class="btn-outline" style="width:100%">ล้าง</button>
+      <div style="margin-top:12px;">
+        <button id="clearFilters" class="btn btn-ghost" style="width:100%;">ล้าง</button>
       </div>
-    </aside>
-
-    <section class="catalog" aria-labelledby="catalogHeading">
-      <div class="catalog-top">
-        <div id="resultCount" class="result-count">กำลังโหลด...</div>
-        <div id="loadingInline" class="muted small hidden">กำลังโหลดรายการสินค้า...</div>
-      </div>
-
-      <div id="cards" class="cards-grid" aria-live="polite">
-        <!-- JS จะ inject card ที่นี่ ไม่มี card ตัวอย่างคงที่ -->
-      </div>
-
-      <div style="height:18px"></div>
-      <div id="catalogMsg" class="muted small"></div>
     </section>
+
+    <!-- History view (hidden by default) -->
+    <section id="viewHistory" class="card" style="display:none;">
+      <h3>ประวัติรับเข้า / ตัดออก</h3>
+      <p class="muted small">ยังไม่มีข้อมูลในหน้าประวัติ (ตัวอย่าง) — จะเชื่อมต่อเมื่อเปิดใช้งานเมนู Admin / API</p>
+    </section>
+
+    <!-- Admin view (hidden by default) -->
+    <section id="viewAdmin" class="card" style="display:none;">
+      <h3>แผงผู้ดูแล</h3>
+      <p class="muted small">เข้าสู่ระบบผู้ดูแลเพื่อเพิ่ม แก้ไข และจัดการสินค้า</p>
+    </section>
+
+    <!-- result count -->
+    <div class="result-header">
+      <h4 id="resultCount">กำลังโหลด...</h4>
+    </div>
+
+    <!-- cards grid -->
+    <section id="catalogGrid" class="catalog-grid-wrap card" style="padding:12px 16px;">
+      <div id="cards" class="cards-grid" aria-live="polite"></div>
+    </section>
+
+    <div id="catalogMsg" class="muted" style="padding:12px 0"></div>
   </main>
 
-  <!-- Detail modal -->
-  <div id="detailModal" class="modal hidden" role="dialog" aria-hidden="true">
+  <!-- DETAIL MODAL -->
+  <div id="detailModal" class="modal hidden" aria-hidden="true" role="dialog" aria-label="รายละเอียดสินค้า">
     <div class="modal-panel">
       <button id="closeModal" class="modal-close" aria-label="ปิด">×</button>
-      <div class="modal-body">
-        <div class="modal-image">
-          <img id="modalImg" src="" alt="">
-        </div>
-        <div class="modal-info">
+      <div class="detail-grid">
+        <div class="detail-image"><img id="modalImg" src="" alt="รูปสินค้า" /></div>
+        <div class="detail-info">
           <h2 id="modalTitle">ชื่อสินค้า</h2>
-          <div id="modalPrice" class="product-price">ราคา</div>
-          <div id="modalStatus" class="muted small">สถานะ</div>
-          <p id="modalDesc" class="muted small" style="margin-top:10px"></p>
-          <div style="margin-top:12px">
-            <button class="btn-primary">+ เพิ่ม</button>
-            <button id="modalCloseBtn" class="btn-outline" style="margin-left:8px">ปิด</button>
+          <div id="modalPrice" class="product-price">0 บาท</div>
+          <div id="modalStatus" class="muted small">สถานะ: -</div>
+          <div id="modalQty" class="muted small">คงเหลือ: 0</div>
+          <p id="modalDesc"></p>
+          <div class="detail-actions" style="margin-top:12px;">
+            <button class="btn btn-primary">+ เพิ่มไปยังตะกร้า</button>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Spinner -->
-  <div id="globalSpinner" class="spinner-overlay hidden" aria-hidden="true">
-    <div class="spinner-panel">
-      <div class="lds-dual-ring" aria-hidden="true"></div>
+  <!-- Global spinner -->
+  <div id="globalSpinner" class="global-spinner hidden" aria-hidden="true">
+    <div class="loading-panel">
+      <div class="loading-spinner" aria-hidden="true"></div>
       <div id="globalSpinnerText">กำลังโหลด...</div>
     </div>
   </div>
 
+  <!-- Inline JS -->
   <script>
-  /* =========================
-     catalog.js inline (ready-to-use)
-     - ตั้งค่า APPS_SCRIPT_URL ของคุณด้านล่าง
-     - ถ้าว่าง จะแสดง sample data
-     ========================= */
+    (function(){
+      // <-- เปลี่ยน APPS_SCRIPT_URL ที่นี่เป็นของคุณถ้าจำเป็น -->
+      const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbymrw5IvZQknZEqjm57AOJ68sbvZaBMsnLBflvXZsl51pgVgTK98Mjt1crqgH6RehScug/exec';
 
-  (function(){
-    // === SET YOUR APPS SCRIPT URL HERE ===
-    const APPS_SCRIPT_URL = ''; // <-- วาง Apps Script URL ของคุณที่นี่ (ตัวอย่าง: 'https://script.google.com/macros/s/AK.../exec')
+      // placeholder
+      const PLACEHOLDER = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480"><rect width="100%" height="100%" fill="#f6f6f6"/></svg>'
+      );
 
-    const PLACEHOLDER = 'data:image/svg+xml;utf8,' + encodeURIComponent(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480"><rect width="100%" height="100%" fill="#f6f6f6"/></svg>`
-    );
+      // helpers
+      const qs = s => document.querySelector(s);
+      const qsa = s => Array.from(document.querySelectorAll(s));
+      const show = el => el && el.classList.remove('hidden'), hide = el => el && el.classList.add('hidden');
 
-    const qs = s => document.querySelector(s);
-    const qsa = s => Array.from(document.querySelectorAll(s));
-    const setHidden = (el, v) => { if(!el) return; el.classList.toggle('hidden', !!v); };
+      // spinner
+      const spinner = {
+        show(msg){ const g = qs('#globalSpinner'); if(!g) return; qs('#globalSpinnerText').textContent = msg || 'กำลังโหลด...'; g.classList.remove('hidden'); },
+        hide(){ const g = qs('#globalSpinner'); if(g) g.classList.add('hidden'); }
+      };
 
-    // spinner helpers
-    const spinner = {
-      show(msg){ const g = qs('#globalSpinner'); if(!g) return; qs('#globalSpinnerText').textContent = msg || 'กำลังโหลด...'; g.classList.remove('hidden'); },
-      hide(){ const g = qs('#globalSpinner'); if(g) g.classList.add('hidden'); }
-    };
-
-    async function apiGet(params){
-      if(!APPS_SCRIPT_URL) return null;
-      const url = APPS_SCRIPT_URL + '?' + new URLSearchParams(params).toString();
-      const res = await fetch(url);
-      return res.json();
-    }
-
-    // create card element
-    function makeCard(p){
-      const root = document.createElement('article');
-      root.className = 'product-card card';
-
-      const thumb = document.createElement('div'); thumb.className = 'thumb';
-      const img = document.createElement('img'); img.alt = p.name || ''; img.loading = 'lazy';
-      img.src = p.imageUrl || PLACEHOLDER;
-      img.onerror = () => img.src = PLACEHOLDER;
-      thumb.appendChild(img);
-
-      const body = document.createElement('div'); body.className = 'card-body';
-      const titleRow = document.createElement('div'); titleRow.className = 'title-row';
-      const badge = document.createElement('span'); badge.className = 'badge';
-      if((p.status||'').toLowerCase() === 'พร้อมส่ง') badge.textContent = 'พร้อมส่ง';
-      else badge.textContent = '👜';
-      titleRow.appendChild(badge);
-
-      const title = document.createElement('div'); title.className = 'product-title'; title.textContent = p.name || '-';
-      titleRow.appendChild(title);
-      body.appendChild(titleRow);
-
-      const price = document.createElement('div'); price.className = 'product-price'; price.textContent = (p.cost ? p.cost + ' บาท' : '-');
-      body.appendChild(price);
-
-      const st = document.createElement('div'); st.className = 'muted small'; st.textContent = 'สถานะ: ' + (p.status||'-');
-      const qt = document.createElement('div'); qt.className = 'muted small'; qt.textContent = 'คงเหลือ: ' + (Number(p.quantity)||0);
-      body.appendChild(st); body.appendChild(qt);
-
-      const foot = document.createElement('div'); foot.className = 'card-foot';
-      const left = document.createElement('div'); left.className = 'left';
-      const btnDetail = document.createElement('button'); btnDetail.className = 'btn-outline'; btnDetail.textContent = 'ดูรายละเอียด';
-      btnDetail.addEventListener('click', () => openDetail(p));
-      left.appendChild(btnDetail);
-      foot.appendChild(left);
-
-      root.appendChild(thumb);
-      root.appendChild(body);
-      root.appendChild(foot);
-      return root;
-    }
-
-    function renderCards(list){
-      const container = qs('#cards');
-      container.innerHTML = '';
-      if(!list || !list.length){
-        container.innerHTML = '<div class="empty-state">ไม่มีสินค้า</div>';
-        qs('#resultCount').textContent = '0 รายการ';
-        return;
+      // sample fallback data if API unreachable
+      function sampleData(){
+        return [
+          { sku:'SF0112', name:'รถเข็นไฟฟ้า (ตัวอย่าง)', quantity:60, cost:500, status:'พร้อมส่ง', imageUrl:'https://picsum.photos/id/1025/600/400', popular:false, description:'รถเข็นไฟฟ้าตัวอย่าง' },
+          { sku:'SF0144', name:'รถเข็นพับได้', quantity:10, cost:10, status:'active', imageUrl:'https://picsum.photos/id/1050/600/400', popular:true, description:'พับได้ พกพาง่าย' },
+          { sku:'SF0152', name:'เสื้อโค้ท (ตัวอย่าง)', quantity:20, cost:200, status:'active', imageUrl:'https://picsum.photos/id/1062/600/400', popular:false, description:'เสื้อผ้าแฟชั่น' }
+        ];
       }
-      qs('#resultCount').textContent = list.length + ' รายการ';
-      const frag = document.createDocumentFragment();
-      list.forEach(p => frag.appendChild(makeCard(p)));
-      container.appendChild(frag);
-    }
 
-    function openDetail(p){
-      qs('#modalImg').src = p.imageUrl || PLACEHOLDER;
-      qs('#modalTitle').textContent = p.name || '';
-      qs('#modalPrice').textContent = p.cost ? (p.cost + ' บาท') : '-';
-      qs('#modalStatus').textContent = 'สถานะ: ' + (p.status || '-');
-      qs('#modalDesc').textContent = p.description || '';
-      qs('#detailModal').classList.remove('hidden');
-      qs('#detailModal').setAttribute('aria-hidden','false');
-    }
-    function closeDetail(){
-      qs('#detailModal').classList.add('hidden');
-      qs('#detailModal').setAttribute('aria-hidden','true');
-    }
+      async function apiGet(params){
+        if(!APPS_SCRIPT_URL) return { ok:true, data: sampleData(), total: 3 };
+        const url = APPS_SCRIPT_URL + '?' + new URLSearchParams(params).toString();
+        const r = await fetch(url);
+        return r.json();
+      }
 
-    // populate category selects from items
-    function populateFilters(items){
-      const catSel = qs('#filterCategory');
-      if(!catSel) return;
-      const cats = new Set();
-      items.forEach(i => { if(i.category) cats.add(i.category); });
-      const cur = catSel.value || '';
-      catSel.innerHTML = '<option value="">หมวดหมู่ทั้งหมด</option>';
-      Array.from(cats).sort().forEach(c => {
-        const o = document.createElement('option'); o.value = c; o.textContent = c; catSel.appendChild(o);
-      });
-      if(cur) catSel.value = cur;
-    }
+      // build card
+      function makeCard(p){
+        const art = document.createElement('article');
+        art.className = 'product-card card';
 
-    async function loadProducts(q){
-      try{
-        setHidden(qs('#loadingInline'), false);
-        spinner.show('กำลังโหลดรายการสินค้า...');
-        let res = null;
-        if(APPS_SCRIPT_URL){
-          res = await apiGet({ action:'list', limit: 300 });
-        } else {
-          // sample data when no server URL provided
-          res = { ok:true, data: sampleData() };
-        }
+        const thumb = document.createElement('div'); thumb.className = 'thumb';
+        const img = document.createElement('img'); img.alt = p.name || ''; img.src = p.imageUrl || PLACEHOLDER;
+        img.onerror = ()=> img.src = PLACEHOLDER;
+        thumb.appendChild(img);
+        art.appendChild(thumb);
 
-        if(!res || !res.ok){
-          renderCards([]);
-          qs('#catalogMsg').textContent = 'โหลดสินค้าล้มเหลว';
-          spinner.hide();
-          setHidden(qs('#loadingInline'), true);
+        const body = document.createElement('div'); body.className = 'card-body';
+        const titleRow = document.createElement('div'); titleRow.className = 'title-row';
+        const badge = document.createElement('span'); badge.className = 'badge';
+        if((p.status||'').toLowerCase() === 'พร้อมส่ง') { badge.textContent = 'พร้อมส่ง'; badge.classList.add('badge-ready'); }
+        else if(p.popular) { badge.textContent = 'ขายดี'; }
+        else { badge.textContent = '👜'; }
+        titleRow.appendChild(badge);
+
+        const title = document.createElement('div'); title.className = 'product-title'; title.textContent = p.name || '(no name)';
+        titleRow.appendChild(title);
+        body.appendChild(titleRow);
+
+        const price = document.createElement('div'); price.className = 'product-price'; price.textContent = p.cost ? (p.cost + ' บาท') : '-';
+        body.appendChild(price);
+
+        const st = document.createElement('div'); st.className = 'muted small'; st.textContent = 'สถานะ: ' + (p.status || '-');
+        const qt = document.createElement('div'); qt.className = 'muted small'; qt.textContent = 'คงเหลือ: ' + (Number(p.quantity) || 0);
+        body.appendChild(st); body.appendChild(qt);
+
+        art.appendChild(body);
+
+        const foot = document.createElement('div'); foot.className = 'card-foot';
+        const btnDetail = document.createElement('button'); btnDetail.className = 'btn-detail'; btnDetail.textContent = 'ดูรายละเอียด';
+        btnDetail.addEventListener('click', ()=> openModal(p));
+        foot.appendChild(btnDetail);
+
+        art.appendChild(foot);
+        return art;
+      }
+
+      function renderCards(list){
+        const container = qs('#cards');
+        container.innerHTML = '';
+        if(!list || list.length === 0){
+          container.innerHTML = '<div class="empty-state">ไม่มีสินค้า</div>';
+          qs('#resultCount').textContent = '0 ผลลัพธ์';
           return;
         }
-
-        const data = res.data || [];
-        data.forEach(d => { d.quantity = Number(d.quantity)||0; d.cost = Number(d.cost)||0; });
-
-        // optional simple client filtering by q/category/status
-        let filtered = data.slice();
-        const qText = (q && q.trim()) || (qs('#searchInput') && qs('#searchInput').value.trim()) || '';
-        if(qText){
-          const ql = qText.toLowerCase();
-          filtered = filtered.filter(it => (it.name||'').toLowerCase().includes(ql) || (it.sku||'').toLowerCase().includes(ql));
-        }
-        const cat = qs('#filterCategory').value;
-        if(cat) filtered = filtered.filter(it => (it.category||'') === cat);
-        const st = qs('#filterStatus').value;
-        if(st) filtered = filtered.filter(it => (it.status||'') === st);
-
-        populateFilters(data);
-        renderCards(filtered);
-        spinner.hide();
-        setHidden(qs('#loadingInline'), true);
-      } catch(err){
-        console.error(err);
-        spinner.hide();
-        setHidden(qs('#loadingInline'), true);
-        qs('#catalogMsg').textContent = 'ข้อผิดพลาด: ' + (err && err.message || err);
+        qs('#resultCount').textContent = list.length + ' รายการ';
+        const frag = document.createDocumentFragment();
+        list.forEach(p => frag.appendChild(makeCard(p)));
+        container.appendChild(frag);
       }
-    }
 
-    function sampleData(){
-      return [
-        { sku:'SF0112', name:'รถเข็นไฟฟ้า (ตัวอย่าง)', quantity:60, cost:500, status:'พร้อมส่ง', imageUrl:'https://picsum.photos/id/1025/800/480', category:'รถเข็น' },
-        { sku:'SF0144', name:'รถเข็นพับได้', quantity:10, cost:10, status:'active', imageUrl:'https://picsum.photos/id/1050/800/480', category:'รถเข็น' },
-        { sku:'SF0152', name:'เสื้อแจ็คเก็ตดำ', quantity:20, cost:200, status:'active', imageUrl:'https://picsum.photos/id/1062/800/480', category:'เสื้อผ้า' },
-      ];
-    }
+      function openModal(p){
+        const modal = qs('#detailModal');
+        if(!modal) return;
+        qs('#modalImg').src = p.imageUrl || PLACEHOLDER;
+        qs('#modalTitle').textContent = p.name || '';
+        qs('#modalPrice').textContent = p.cost ? (p.cost + ' บาท') : '-';
+        qs('#modalStatus').textContent = 'สถานะ: ' + (p.status || '-');
+        qs('#modalQty').textContent = 'คงเหลือ: ' + (Number(p.quantity)||0);
+        qs('#modalDesc').textContent = p.description || '';
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+      }
+      function closeModal(){ const m = qs('#detailModal'); if(!m) return; m.classList.add('hidden'); m.setAttribute('aria-hidden','true'); }
 
-    // wire up events
-    function init(){
-      // remove any stray hard-coded .card nodes (defensive)
-      qsa('.card').forEach(el => { if(!el.closest('#cards')) el.remove(); });
+      // filters
+      function populateFilters(items){
+        const catSel = qs('#filterCategory');
+        if(!catSel) return;
+        const cats = new Set();
+        items.forEach(it => { if(it.category) cats.add(it.category); });
+        const cur = catSel.value || '';
+        catSel.innerHTML = '<option value="">หมวดหมู่ทั้งหมด</option>';
+        Array.from(cats).sort().forEach(c => {
+          const o = document.createElement('option'); o.value = c; o.textContent = c; catSel.appendChild(o);
+        });
+        if(cur) catSel.value = cur;
+      }
 
-      qs('#searchBtn').addEventListener('click', ()=> loadProducts(qs('#searchInput').value));
-      qs('#searchInput').addEventListener('keydown', (e)=> { if(e.key === 'Enter') loadProducts(qs('#searchInput').value); });
-
-      qs('#clearFilters').addEventListener('click', ()=>{
-        qs('#searchInput').value = '';
-        qs('#filterCategory').value = '';
-        qs('#filterStatus').value = '';
-        loadProducts();
-      });
-
-      qs('#filterCategory').addEventListener('change', ()=> loadProducts());
-      qs('#filterStatus').addEventListener('change', ()=> loadProducts());
-
-      // nav buttons
-      qsa('.nav-btn').forEach(btn => btn.addEventListener('click', (ev)=>{
-        qsa('.nav-btn').forEach(b=>b.classList.remove('active'));
-        ev.currentTarget.classList.add('active');
-        const view = ev.currentTarget.dataset.view;
-        if(view !== 'catalog'){
-          // placeholders for other pages — you asked to create switch buttons; they alert for now
-          alert('เลือกหน้า: ' + view + '\n(หน้าที่ไม่ใช่ Catalog ยังเป็น placeholder — จะขยายใน Phase ถัดไป)');
+      // load products
+      async function loadProducts(q){
+        try{
+          spinner.show('โหลดสินค้ากำลังทำงาน...');
+          const res = await apiGet({ action:'list', limit: 500 });
+          if(!res || !res.ok){ renderCards([]); qs('#catalogMsg').textContent = 'โหลดสินค้าล้มเหลว'; spinner.hide(); return; }
+          const data = res.data || [];
+          data.forEach(d => { d.quantity = Number(d.quantity)||0; d.cost = Number(d.cost)||0; });
+          populateFilters(data);
+          renderCards(data);
+          spinner.hide();
+        } catch(err){
+          console.error(err);
+          spinner.hide();
+          renderCards(sampleData());
+          qs('#catalogMsg').textContent = 'ข้อผิดพลาด: ' + (err.message||err);
         }
-      }));
+      }
 
-      qs('#closeModal').addEventListener('click', closeDetail);
-      qs('#modalCloseBtn').addEventListener('click', closeDetail);
-      qs('#detailModal').addEventListener('click', (e) => { if(e.target === qs('#detailModal')) closeDetail(); });
-      document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeDetail(); });
+      // nav switching
+      function showView(name){
+        qsa('#viewCatalog,#viewHistory,#viewAdmin').forEach(el => el.style.display = 'none');
+        if(name === 'catalog') qs('#viewCatalog').style.display = '';
+        else if(name === 'history') qs('#viewHistory').style.display = '';
+        else if(name === 'admin') qs('#viewAdmin').style.display = '';
+      }
 
-      // initial load
-      loadProducts();
-    }
+      // init
+      function init(){
+        // nav buttons
+        qsa('.nav-btn').forEach(btn => {
+          btn.addEventListener('click', (ev) => {
+            qsa('.nav-btn').forEach(x => x.classList.remove('active'));
+            ev.currentTarget.classList.add('active');
+            const view = ev.currentTarget.dataset.view;
+            showView(view);
+            if(view === 'catalog') loadProducts();
+            // for history/admin we show placeholders (you can expand)
+          });
+        });
 
-    document.addEventListener('DOMContentLoaded', init);
-  })();
+        qs('#searchBtn').addEventListener('click', ()=> {
+          const q = qs('#searchInput').value.trim();
+          if(!q) return loadProducts();
+          // quick local filter: call loadProducts then filter
+          loadProducts().then(()=> {
+            const cards = Array.from(qs('#cards').children);
+            cards.forEach(c => {
+              const title = (c.querySelector('.product-title') && c.querySelector('.product-title').textContent || '').toLowerCase();
+              if(!title.includes(q.toLowerCase())) c.style.display = 'none';
+            });
+          });
+        });
+        qs('#searchInput').addEventListener('keydown', (e)=> { if(e.key === 'Enter') qs('#searchBtn').click(); });
+
+        qs('#clearFilters').addEventListener('click', ()=> {
+          qs('#searchInput').value = ''; qs('#filterCategory').value = ''; qs('#filterStatus').value = '';
+          loadProducts();
+        });
+
+        qs('#filterStatus').addEventListener('change', ()=> {
+          const st = qs('#filterStatus').value;
+          loadProducts().then(()=> {
+            if(st){
+              Array.from(qs('#cards').children).forEach(card => {
+                const statusText = card.querySelector('.muted.small') && card.querySelector('.muted.small').textContent || '';
+                if(!statusText.toLowerCase().includes(st.toLowerCase())) card.style.display = 'none';
+              });
+            }
+          });
+        });
+
+        qs('#closeModal').addEventListener('click', closeModal);
+        qs('#detailModal').addEventListener('click', (e)=> { if(e.target === qs('#detailModal')) closeModal(); });
+        document.addEventListener('keydown', (e)=> { if(e.key === 'Escape') closeModal(); });
+
+        // initial load
+        loadProducts();
+      }
+
+      document.addEventListener('DOMContentLoaded', init);
+    })();
   </script>
 </body>
 </html>
